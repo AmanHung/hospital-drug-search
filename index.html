@@ -147,8 +147,15 @@
                                 <span class="text-gray-900 select-all">{{ selectedDrug.code }}</span>
                             </div>
                             <div>
-                                <span class="text-xs text-gray-500 block">健保碼</span>
-                                <span class="text-gray-900 select-all">{{ selectedDrug.nhiCode }}</span>
+                                <span class="text-xs text-gray-500 block">健保碼 (點擊查價)</span>
+                                <a v-if="selectedDrug.nhiCode && selectedDrug.nhiCode !== '-'" 
+                                   href="#" 
+                                   @click.prevent="searchNhiPrice(selectedDrug.nhiCode)"
+                                   class="text-blue-600 font-bold hover:text-blue-800 underline flex items-center select-all">
+                                    {{ selectedDrug.nhiCode }}
+                                    <i class="fa-solid fa-magnifying-glass-dollar ml-1 text-xs"></i>
+                                </a>
+                                <span v-else class="text-gray-900">-</span>
                             </div>
                         </div>
                          <div v-if="selectedDrug.components">
@@ -208,6 +215,7 @@
     const { createApp, ref, computed, onMounted } = Vue;
 
     // ============== 設定資料來源 ==============
+    // 請確認這兩個變數與您的設定一致
     const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTl_HoBeP0qBD79IB7Ulp_xAMRX4Gyx65pgU-4Kf15Lu4g4FqGdVBDSn1BEI6sNXht889zjRx6RErb-/pub?output=csv';
     const CLOUDINARY_CLOUD_NAME = 'de02nbokt'; 
     // ==========================================
@@ -228,7 +236,7 @@
                     header: true,
                     skipEmptyLines: true,
                     complete: (results) => {
-                        console.log("資料讀取成功，第一筆資料:", results.data[0]);
+                        console.log("資料讀取成功", results.data[0]); 
                         if (results.data && results.data.length > 0) {
                             processData(results.data);
                         } else {
@@ -247,36 +255,30 @@
             // 資料處理與欄位對應
             const processData = (rawData) => {
                 drugs.value = rawData.map(row => {
-                    // 根據 CSV 欄位名稱進行對應
                     const code = row['藥品代碼'] ? row['藥品代碼'].trim() : '';
                     const imgName = row['圖檔名稱'] ? row['圖檔名稱'].trim() : '';
                     
-                    // 圖片連結處理 (Cloudinary)
                     let imgUrl = null;
                     if (imgName) {
                         imgUrl = `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/w_400,c_scale,q_auto,f_auto/${imgName}`;
                     }
 
-                    // 狀態判斷邏輯
-                    const s1 = row['門診停用否'] ? row['門診停用否'].trim().toUpperCase() : '';
-                    const s2 = row['住院停用否'] ? row['住院停用否'].trim().toUpperCase() : '';
+                    const status1 = row['門診停用否'] ? row['門診停用否'].trim().toUpperCase() : '';
+                    const status2 = row['住院停用否'] ? row['住院停用否'].trim().toUpperCase() : '';
                     
+                    // 修正後的狀態邏輯：N > Y > C
                     let isDiscontinued = false;
                     let isOutOfStock = false;
                     
-                    // 邏輯 1: 只要有一欄位有 N -> 呈現「使用中」(正常)
-                    if (s1 === 'N' || s2 === 'N') {
-                        // 視為正常，不做任何標記
+                    if (status1 === 'N' || status2 === 'N') {
+                        // 1. 只要有一個 N，就是正常使用 (不顯示標籤)
                         isDiscontinued = false;
                         isOutOfStock = false;
-                    } 
-                    // 邏輯 2: 如果同時出現 Y 和 C (或兩者皆 Y) -> 呈現「已停用」
-                    // 這裡的邏輯是：在沒有 N 的情況下，只要有 Y，就視為停用
-                    else if (s1 === 'Y' || s2 === 'Y') {
+                    } else if (status1 === 'Y' || status2 === 'Y') {
+                        // 2. 沒有 N，但有 Y (Y+C 或 Y+Y 或 Y+空)，視為停用
                         isDiscontinued = true;
-                    } 
-                    // 邏輯 3: 剩下就是兩者皆 C (或 C 配空值) -> 呈現「缺貨中」
-                    else if (s1 === 'C' || s2 === 'C') {
+                    } else if (status1 === 'C' || status2 === 'C') {
+                        // 3. 剩下的情況：沒有 N 也沒有 Y，只有 C -> 缺貨
                         isOutOfStock = true;
                     }
 
@@ -299,14 +301,14 @@
                         imgUrl: imgUrl,
                         leafletLink: row['超連結'] || ''
                     };
-                }).filter(d => d.code); // 過濾掉沒有代碼的空行
+                }).filter(d => d.code); 
             };
 
             // 搜尋與排序邏輯
             const filteredDrugs = computed(() => {
                 let result = drugs.value;
 
-                // 1. 先過濾關鍵字
+                // 1. 過濾
                 if (keyword.value) {
                     const k = keyword.value.toLowerCase().trim();
                     result = result.filter(d => 
@@ -317,17 +319,30 @@
                     );
                 }
 
-                // 2. 再進行排序 (正常 -> 缺貨 -> 停用)
-                // 權重：正常=1, 缺貨=2, 停用=3 (數字越小越前面)
+                // 2. 排序 (正常 -> 缺貨 -> 停用)
                 return result.sort((a, b) => {
                     const getScore = (drug) => {
-                        if (drug.isDiscontinued) return 3; // 停用放最後
-                        if (drug.isOutOfStock) return 2;   // 缺貨放中間
-                        return 1;                          // 正常放最前
+                        if (drug.isDiscontinued) return 3; // 停用墊底
+                        if (drug.isOutOfStock) return 2;   // 缺貨中間
+                        return 1;                          // 正常最前
                     };
                     return getScore(a) - getScore(b);
                 });
             });
+
+            // 健保碼查價功能
+            const searchNhiPrice = (code) => {
+                // 1. 複製代碼到剪貼簿
+                navigator.clipboard.writeText(code).then(() => {
+                    // 2. 提示使用者
+                    if(confirm(`健保碼 ${code} 已複製！\n\n是否前往健保署網站？\n(請在網站欄位貼上代碼查詢)`)) {
+                        window.open('https://info.nhi.gov.tw/INAE3000/INAE3000S01', '_blank');
+                    }
+                }).catch(err => {
+                    // 如果複製失敗(部分手機瀏覽器限制)，還是打開網頁
+                    window.open('https://info.nhi.gov.tw/INAE3000/INAE3000S01', '_blank');
+                });
+            };
 
             const openDetail = (drug) => selectedDrug.value = drug;
             const closeDetail = () => selectedDrug.value = null;
@@ -345,7 +360,8 @@
                 error,
                 openDetail,
                 closeDetail,
-                imageLoadError
+                imageLoadError,
+                searchNhiPrice
             };
         }
     }).mount('#app');
