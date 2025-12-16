@@ -15,6 +15,9 @@
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         [v-cloak] { display: none; }
+        /* 用於過場動畫 */
+        .animate-slide-up { animation: slideUp 0.3s ease-out; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -62,6 +65,7 @@
             :key="drug.code" 
             @click="openDetail(drug)"
             class="bg-white rounded-xl p-3 mb-3 card-shadow border border-gray-100 active:bg-blue-50 transition-colors cursor-pointer relative overflow-hidden"
+            :class="{'opacity-75': drug.isDiscontinued}"
         >
             <div class="absolute top-0 right-0 flex">
                 <span v-if="drug.isHighAlert" class="bg-red-500 text-white text-[10px] px-2 py-1 font-bold rounded-bl-lg shadow-sm">
@@ -82,7 +86,8 @@
                 </div>
 
                 <div class="flex-1 min-w-0">
-                    <h3 class="text-blue-800 font-bold text-base leading-tight mb-1 truncate pr-14">
+                    <h3 class="font-bold text-base leading-tight mb-1 truncate pr-14" 
+                        :class="drug.isDiscontinued ? 'text-gray-500' : 'text-blue-800'">
                         {{ drug.tradeName }}
                     </h3>
                     <p class="text-gray-500 text-xs font-mono mb-1 truncate">{{ drug.genericName }}</p>
@@ -105,7 +110,11 @@
         <div class="bg-white w-full max-w-md h-[92vh] sm:h-[85vh] rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden shadow-2xl animate-slide-up">
             
             <div class="flex justify-between items-center p-3 border-b bg-gray-50">
-                <h2 class="font-bold text-lg text-gray-800 truncate pr-4">{{ selectedDrug.tradeName }}</h2>
+                <h2 class="font-bold text-lg truncate pr-4" 
+                    :class="selectedDrug.isDiscontinued ? 'text-gray-500' : 'text-gray-800'">
+                    {{ selectedDrug.tradeName }}
+                    <span v-if="selectedDrug.isDiscontinued" class="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded ml-1">已停用</span>
+                </h2>
                 <button @click="closeDetail" class="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 transition">
                     <i class="fa-solid fa-times"></i>
                 </button>
@@ -176,37 +185,14 @@
                     </div>
                 </section>
                 
-                <section class="bg-gray-100 rounded-xl p-4">
-                    <div class="flex justify-between items-center mb-2 cursor-pointer" @click="showCalc = !showCalc">
-                         <h3 class="font-bold text-gray-700 text-sm"><i class="fa-solid fa-calculator mr-1"></i>腎功能計算 (C-G Formula)</h3>
-                         <i :class="showCalc ? 'fa-angle-up' : 'fa-angle-down'" class="fa-solid text-gray-500"></i>
-                    </div>
-                    
-                    <div v-show="showCalc" class="space-y-2 text-sm transition-all">
-                        <div class="grid grid-cols-2 gap-2">
-                            <input v-model="calcAge" type="number" placeholder="年齡" class="p-2 rounded border w-full">
-                            <input v-model="calcWeight" type="number" placeholder="體重 (kg)" class="p-2 rounded border w-full">
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <input v-model="calcScr" type="number" step="0.1" placeholder="SCr (mg/dL)" class="p-2 rounded border w-full">
-                            <select v-model="calcSex" class="p-2 rounded border w-full bg-white">
-                                <option value="1">男性</option>
-                                <option value="0.85">女性</option>
-                            </select>
-                        </div>
-                        <div class="bg-blue-600 text-white p-2 rounded text-center font-bold mt-2">
-                            CrCl: {{ calculateGFR }} ml/min
-                        </div>
-                    </div>
-                </section>
-            </div>
+                </div>
             
             <div class="p-3 border-t bg-gray-50 flex gap-2">
                 <a v-if="selectedDrug.leafletLink" :href="selectedDrug.leafletLink" target="_blank" class="flex-1 bg-white border border-gray-300 text-gray-700 py-2.5 rounded-lg text-center font-bold text-sm shadow-sm flex items-center justify-center">
                     <i class="fa-solid fa-file-pdf mr-2 text-red-500"></i> 仿單
                 </a>
                 <button @click="closeDetail" class="flex-1 bg-blue-600 text-white py-2.5 rounded-lg text-center font-bold text-sm shadow-md active:bg-blue-700">
-                    關閉
+                    確定
                 </button>
             </div>
         </div>
@@ -218,6 +204,7 @@
     const { createApp, ref, computed, onMounted } = Vue;
 
     // ============== 設定資料來源 ==============
+    // 請確認這兩個變數與您的設定一致
     const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTl_HoBeP0qBD79IB7Ulp_xAMRX4Gyx65pgU-4Kf15Lu4g4FqGdVBDSn1BEI6sNXht889zjRx6RErb-/pub?output=csv';
     const CLOUDINARY_CLOUD_NAME = 'de02nbokt'; 
     // ==========================================
@@ -229,14 +216,7 @@
             const selectedDrug = ref(null);
             const loading = ref(true);
             const error = ref('');
-            const showCalc = ref(false);
             
-            // 計算機變數
-            const calcAge = ref('');
-            const calcWeight = ref('');
-            const calcScr = ref('');
-            const calcSex = ref('1');
-
             // 讀取 Google Sheet CSV
             const fetchDrugs = () => {
                 loading.value = true;
@@ -245,7 +225,7 @@
                     header: true,
                     skipEmptyLines: true,
                     complete: (results) => {
-                        console.log("資料讀取成功，第一筆資料:", results.data[0]);
+                        console.log("資料讀取成功", results.data[0]); 
                         if (results.data && results.data.length > 0) {
                             processData(results.data);
                         } else {
@@ -264,20 +244,18 @@
             // 資料處理與欄位對應
             const processData = (rawData) => {
                 drugs.value = rawData.map(row => {
-                    // 根據 CSV 欄位名稱進行對應
                     const code = row['藥品代碼'] ? row['藥品代碼'].trim() : '';
                     const imgName = row['圖檔名稱'] ? row['圖檔名稱'].trim() : '';
                     
-                    // 圖片連結處理 (Cloudinary)
                     let imgUrl = null;
                     if (imgName) {
                         imgUrl = `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/w_400,c_scale,q_auto,f_auto/${imgName}`;
                     }
 
-                    // 狀態判斷
                     const status1 = row['門診停用否'] ? row['門診停用否'].trim().toUpperCase() : '';
                     const status2 = row['住院停用否'] ? row['住院停用否'].trim().toUpperCase() : '';
                     
+                    // 狀態邏輯判斷
                     const isDiscontinued = status1 === 'Y' || status2 === 'Y';
                     const isOutOfStock = status1 === 'C' || status2 === 'C';
 
@@ -300,26 +278,34 @@
                         imgUrl: imgUrl,
                         leafletLink: row['超連結'] || ''
                     };
-                }).filter(d => d.code); // 過濾掉沒有代碼的空行
+                }).filter(d => d.code); 
             };
 
-            // 搜尋邏輯
+            // 搜尋與排序邏輯 (Key Update!)
             const filteredDrugs = computed(() => {
-                if (!keyword.value) return drugs.value;
-                const k = keyword.value.toLowerCase().trim();
-                return drugs.value.filter(d => 
-                    (d.tradeName && d.tradeName.toLowerCase().includes(k)) ||
-                    (d.genericName && d.genericName.toLowerCase().includes(k)) ||
-                    (d.code && d.code.toLowerCase().includes(k)) ||
-                    (d.indication && d.indication.toLowerCase().includes(k))
-                );
-            });
+                let result = drugs.value;
 
-            const calculateGFR = computed(() => {
-                if(!calcAge.value || !calcWeight.value || !calcScr.value) return '---';
-                const constant = parseFloat(calcSex.value);
-                const result = ((140 - calcAge.value) * calcWeight.value) / (72 * calcScr.value) * constant;
-                return result.toFixed(1);
+                // 1. 先過濾關鍵字
+                if (keyword.value) {
+                    const k = keyword.value.toLowerCase().trim();
+                    result = result.filter(d => 
+                        (d.tradeName && d.tradeName.toLowerCase().includes(k)) ||
+                        (d.genericName && d.genericName.toLowerCase().includes(k)) ||
+                        (d.code && d.code.toLowerCase().includes(k)) ||
+                        (d.indication && d.indication.toLowerCase().includes(k))
+                    );
+                }
+
+                // 2. 再進行排序 (正常 -> 缺貨 -> 停用)
+                // 權重：正常=1, 缺貨=2, 停用=3 (數字越小越前面)
+                return result.sort((a, b) => {
+                    const getScore = (drug) => {
+                        if (drug.isDiscontinued) return 3; // 停用放最後
+                        if (drug.isOutOfStock) return 2;   // 缺貨放中間
+                        return 1;                          // 正常放最前
+                    };
+                    return getScore(a) - getScore(b);
+                });
             });
 
             const openDetail = (drug) => selectedDrug.value = drug;
@@ -338,9 +324,7 @@
                 error,
                 openDetail,
                 closeDetail,
-                imageLoadError,
-                showCalc,
-                calcAge, calcWeight, calcScr, calcSex, calculateGFR
+                imageLoadError
             };
         }
     }).mount('#app');
