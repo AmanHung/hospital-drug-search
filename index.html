@@ -253,7 +253,7 @@
     const CLOUDINARY_CLOUD_NAME = 'de02nbokt'; 
     // ==========================================
 
-    // *** 完整 ATC 中文對照表 (基於您提供的檔案) ***
+    // *** 完整 ATC 中文對照表 ***
     const ATC_DICT = {
         'A': '消化道及代謝',
         'A01': '口腔科製劑',
@@ -408,6 +408,10 @@
                 let processed = rawData.map(row => {
                     const code = row['藥品代碼'] ? row['藥品代碼'].trim() : '';
                     if(!code) return null;
+                    
+                    // 【關鍵修正】過濾規則：長度必須為 6 碼，且只能包含 英文、數字、橫線 (-)
+                    const isValidCode = /^[A-Za-z0-9\-]{6}$/.test(code);
+                    if (!isValidCode) return null;
 
                     const atc = atcMap[code] || '';
                     const imgName = row['圖檔名稱'] ? row['圖檔名稱'].trim() : '';
