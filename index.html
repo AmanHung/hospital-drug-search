@@ -409,8 +409,9 @@
                     const code = row['藥品代碼'] ? row['藥品代碼'].trim() : '';
                     if(!code) return null;
                     
-                    // 【關鍵修正】過濾規則：長度必須為 6 碼，且只能包含 英文、數字、橫線 (-)
-                    const isValidCode = /^[A-Za-z0-9\-]{6}$/.test(code);
+                    // 【嚴格過濾邏輯】
+                    // 規則：6碼總長度，前4碼為英文字母，後2碼為數字
+                    const isValidCode = /^[A-Za-z]{4}\d{2}$/.test(code);
                     if (!isValidCode) return null;
 
                     const atc = atcMap[code] || '';
