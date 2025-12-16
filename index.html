@@ -15,7 +15,6 @@
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         [v-cloak] { display: none; }
-        /* 用於過場動畫 */
         .animate-slide-up { animation: slideUp 0.3s ease-out; }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
     </style>
@@ -65,7 +64,7 @@
             :key="drug.code" 
             @click="openDetail(drug)"
             class="bg-white rounded-xl p-3 mb-3 card-shadow border border-gray-100 active:bg-blue-50 transition-colors cursor-pointer relative overflow-hidden"
-            :class="{'opacity-75': drug.isDiscontinued}"
+            :class="{'opacity-60': drug.isDiscontinued}"
         >
             <div class="absolute top-0 right-0 flex">
                 <span v-if="drug.isHighAlert" class="bg-red-500 text-white text-[10px] px-2 py-1 font-bold rounded-bl-lg shadow-sm">
@@ -87,7 +86,7 @@
 
                 <div class="flex-1 min-w-0">
                     <h3 class="font-bold text-base leading-tight mb-1 truncate pr-14" 
-                        :class="drug.isDiscontinued ? 'text-gray-500' : 'text-blue-800'">
+                        :class="drug.isDiscontinued ? 'text-gray-500 line-through' : 'text-blue-800'">
                         {{ drug.tradeName }}
                     </h3>
                     <p class="text-gray-500 text-xs font-mono mb-1 truncate">{{ drug.genericName }}</p>
@@ -107,13 +106,12 @@
     </main>
 
     <div v-if="selectedDrug" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-0 sm:p-4" @click.self="closeDetail">
-        <div class="bg-white w-full max-w-md h-[92vh] sm:h-[85vh] rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden shadow-2xl animate-slide-up">
+        <div class="bg-white w-full max-w-md h-[90vh] sm:h-[85vh] rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden shadow-2xl animate-slide-up">
             
             <div class="flex justify-between items-center p-3 border-b bg-gray-50">
-                <h2 class="font-bold text-lg truncate pr-4" 
-                    :class="selectedDrug.isDiscontinued ? 'text-gray-500' : 'text-gray-800'">
+                <h2 class="font-bold text-lg truncate pr-4"
+                    :class="selectedDrug.isDiscontinued ? 'text-gray-500 line-through' : 'text-gray-800'">
                     {{ selectedDrug.tradeName }}
-                    <span v-if="selectedDrug.isDiscontinued" class="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded ml-1">已停用</span>
                 </h2>
                 <button @click="closeDetail" class="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 transition">
                     <i class="fa-solid fa-times"></i>
@@ -121,6 +119,13 @@
             </div>
 
             <div class="flex-1 overflow-y-auto p-4 space-y-5">
+                <div v-if="selectedDrug.isDiscontinued" class="bg-gray-100 border-l-4 border-gray-500 p-3 rounded text-gray-700 text-sm font-bold flex items-center">
+                    <i class="fa-solid fa-ban mr-2"></i> 此藥品已停用
+                </div>
+                <div v-else-if="selectedDrug.isOutOfStock" class="bg-orange-50 border-l-4 border-orange-500 p-3 rounded text-orange-700 text-sm font-bold flex items-center">
+                    <i class="fa-solid fa-box-open mr-2"></i> 此藥品目前缺貨中
+                </div>
+
                 <div class="w-full bg-white rounded-xl border flex items-center justify-center overflow-hidden relative shadow-sm min-h-[150px]">
                     <img v-if="selectedDrug.imgUrl" :src="selectedDrug.imgUrl" class="max-h-64 object-contain" @error="imageLoadError">
                     <div v-else class="text-gray-400 py-10 flex flex-col items-center">
@@ -184,8 +189,7 @@
                         </div>
                     </div>
                 </section>
-                
-                </div>
+            </div>
             
             <div class="p-3 border-t bg-gray-50 flex gap-2">
                 <a v-if="selectedDrug.leafletLink" :href="selectedDrug.leafletLink" target="_blank" class="flex-1 bg-white border border-gray-300 text-gray-700 py-2.5 rounded-lg text-center font-bold text-sm shadow-sm flex items-center justify-center">
@@ -204,7 +208,6 @@
     const { createApp, ref, computed, onMounted } = Vue;
 
     // ============== 設定資料來源 ==============
-    // 請確認這兩個變數與您的設定一致
     const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTl_HoBeP0qBD79IB7Ulp_xAMRX4Gyx65pgU-4Kf15Lu4g4FqGdVBDSn1BEI6sNXht889zjRx6RErb-/pub?output=csv';
     const CLOUDINARY_CLOUD_NAME = 'de02nbokt'; 
     // ==========================================
@@ -225,7 +228,7 @@
                     header: true,
                     skipEmptyLines: true,
                     complete: (results) => {
-                        console.log("資料讀取成功", results.data[0]); 
+                        console.log("資料讀取成功，第一筆資料:", results.data[0]);
                         if (results.data && results.data.length > 0) {
                             processData(results.data);
                         } else {
@@ -244,20 +247,38 @@
             // 資料處理與欄位對應
             const processData = (rawData) => {
                 drugs.value = rawData.map(row => {
+                    // 根據 CSV 欄位名稱進行對應
                     const code = row['藥品代碼'] ? row['藥品代碼'].trim() : '';
                     const imgName = row['圖檔名稱'] ? row['圖檔名稱'].trim() : '';
                     
+                    // 圖片連結處理 (Cloudinary)
                     let imgUrl = null;
                     if (imgName) {
                         imgUrl = `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/w_400,c_scale,q_auto,f_auto/${imgName}`;
                     }
 
-                    const status1 = row['門診停用否'] ? row['門診停用否'].trim().toUpperCase() : '';
-                    const status2 = row['住院停用否'] ? row['住院停用否'].trim().toUpperCase() : '';
+                    // 狀態判斷邏輯
+                    const s1 = row['門診停用否'] ? row['門診停用否'].trim().toUpperCase() : '';
+                    const s2 = row['住院停用否'] ? row['住院停用否'].trim().toUpperCase() : '';
                     
-                    // 狀態邏輯判斷
-                    const isDiscontinued = status1 === 'Y' || status2 === 'Y';
-                    const isOutOfStock = status1 === 'C' || status2 === 'C';
+                    let isDiscontinued = false;
+                    let isOutOfStock = false;
+                    
+                    // 邏輯 1: 只要有一欄位有 N -> 呈現「使用中」(正常)
+                    if (s1 === 'N' || s2 === 'N') {
+                        // 視為正常，不做任何標記
+                        isDiscontinued = false;
+                        isOutOfStock = false;
+                    } 
+                    // 邏輯 2: 如果同時出現 Y 和 C (或兩者皆 Y) -> 呈現「已停用」
+                    // 這裡的邏輯是：在沒有 N 的情況下，只要有 Y，就視為停用
+                    else if (s1 === 'Y' || s2 === 'Y') {
+                        isDiscontinued = true;
+                    } 
+                    // 邏輯 3: 剩下就是兩者皆 C (或 C 配空值) -> 呈現「缺貨中」
+                    else if (s1 === 'C' || s2 === 'C') {
+                        isOutOfStock = true;
+                    }
 
                     return {
                         code: code,
@@ -278,10 +299,10 @@
                         imgUrl: imgUrl,
                         leafletLink: row['超連結'] || ''
                     };
-                }).filter(d => d.code); 
+                }).filter(d => d.code); // 過濾掉沒有代碼的空行
             };
 
-            // 搜尋與排序邏輯 (Key Update!)
+            // 搜尋與排序邏輯
             const filteredDrugs = computed(() => {
                 let result = drugs.value;
 
