@@ -53,7 +53,7 @@
             </button>
         </div>
         
-        <div v-if="viewMode === 'result_list' && filterCategory" class="mt-2 text-white text-xs flex items-center overflow-hidden">
+        <div v-if="(viewMode === 'result_list' || viewMode === 'sub_minor_list') && filterCategory" class="mt-2 text-white text-xs flex items-center overflow-hidden">
             <span class="opacity-70">分類：</span>
             <span class="font-bold truncate ml-1 bg-blue-800 px-2 py-0.5 rounded">{{ currentCategoryName }}</span>
         </div>
@@ -109,7 +109,30 @@
                     <div class="flex items-center">
                         <span class="text-gray-800 font-medium">{{ sub.name }}</span>
                     </div>
-                    <span class="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full">{{ sub.count }} 筆</span>
+                    <div v-if="sub.count >= 10 && sub.hasSubSub" class="flex items-center text-gray-400">
+                        <span class="text-xs mr-2">{{ sub.count }} 筆</span>
+                        <i class="fa-solid fa-chevron-right text-sm"></i>
+                    </div>
+                    <span v-else class="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full">{{ sub.count }} 筆</span>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="viewMode === 'sub_minor_list'" class="animate-slide-up">
+            <div class="flex items-center justify-between mb-3 px-1">
+                <button @click="viewMode = 'minor_list'" class="text-blue-600 text-sm font-bold flex items-center">
+                    <i class="fa-solid fa-arrow-left mr-1"></i> 返回子分類
+                </button>
+                <span class="text-xs text-gray-500 font-bold">{{ selectedMinor.name }}</span>
+            </div>
+            <div class="grid grid-cols-1 gap-2">
+                <div v-for="subsub in selectedMinor.subsubs" :key="subsub.code" 
+                     @click="selectSubMinorCategory(subsub)"
+                     class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-green-50 transition">
+                    <div class="flex items-center">
+                        <span class="text-gray-800 font-medium">{{ subsub.name }}</span>
+                    </div>
+                    <span class="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full">{{ subsub.count }} 筆</span>
                 </div>
             </div>
         </div>
@@ -143,8 +166,11 @@
                             {{ drug.tradeName }}
                         </h3>
                         <p class="text-gray-500 text-xs font-mono mb-1 truncate">{{ drug.genericName }}</p>
-                        <div v-if="drug.atcSub" class="mb-1">
-                             <span class="text-[10px] bg-indigo-50 text-indigo-600 px-1 rounded truncate inline-block max-w-full">
+                        <div class="mb-1">
+                             <span v-if="drug.atcSubSub" class="text-[10px] bg-green-50 text-green-600 px-1 rounded truncate inline-block max-w-full">
+                                {{ drug.atcSubSub }}
+                             </span>
+                             <span v-else-if="drug.atcSub" class="text-[10px] bg-indigo-50 text-indigo-600 px-1 rounded truncate inline-block max-w-full">
                                 {{ drug.atcSub }}
                              </span>
                         </div>
@@ -193,6 +219,10 @@
                         <div v-if="selectedDrug.atcSub" class="flex items-center gap-2 ml-2 border-l-2 border-indigo-200 pl-2 p-1">
                             <span class="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full font-bold">子分類</span>
                             <span class="text-sm text-indigo-800">{{ selectedDrug.atcSub }}</span>
+                        </div>
+                        <div v-if="selectedDrug.atcSubSub" class="flex items-center gap-2 ml-4 border-l-2 border-green-200 pl-2 p-1">
+                            <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-bold">細分類</span>
+                            <span class="text-sm text-green-800">{{ selectedDrug.atcSubSub }}</span>
                         </div>
                     </div>
                 </section>
@@ -253,118 +283,50 @@
     const CLOUDINARY_CLOUD_NAME = 'de02nbokt'; 
     // ==========================================
 
-    // *** 完整 ATC 中文對照表 ***
+    // *** 完整 ATC 中文對照表 (整合了 1碼, 3碼, 5碼) ***
     const ATC_DICT = {
-        'A': '消化道及代謝',
-        'A01': '口腔科製劑',
-        'A02': '胃酸相關疾病用藥',
-        'A03': '功能性腸胃道疾病用藥',
-        'A04': '止吐藥及止噁心藥 (依據來源推測此為A04父類)',
-        'A04AA': '止吐藥及止噁心藥：血清素（5HT3）拮抗劑',
-        'A04AD': '止吐藥及止噁心藥：P物質/NK 1受體拮抗劑',
-        'A05': '膽汁與肝臟治療劑',
-        'A06': '便秘用藥',
-        'A07': '止瀉藥、腸道抗發炎/抗感染劑',
-        'A08': '抗肥胖製劑，不包括飲食產品',
-        'A09': '消化劑，包括酶',
+        'A': '消化道及代謝', 'A01': '口腔科製劑', 'A02': '胃酸相關疾病用藥', 'A03': '功能性腸胃道疾病用藥', 'A04': '止吐藥及止噁心藥',
+        'A04AA': '止吐藥及止噁心藥：血清素（5HT3）拮抗劑', 'A04AD': '止吐藥及止噁心藥：P物質/NK 1受體拮抗劑',
+        'A05': '膽汁與肝臟治療劑', 'A06': '便秘用藥', 'A07': '止瀉藥、腸道抗發炎/抗感染劑', 'A08': '抗肥胖製劑，不包括飲食產品', 'A09': '消化劑，包括酶',
         'A10': '糖尿病用藥',
-        'A11': '維生素',
-        'A12': '礦物質補充劑',
-        'A13': '補品',
-        'A14': '系統性同化劑',
-        'A15': '食慾興奮劑',
-        'A16': '其他消化道和代謝產品',
-        'B': '血液及造血器官',
-        'B01': '抗血栓藥',
-        'B02': '抗出血藥',
-        'B03': '抗貧血製劑',
-        'B05': '血液替代品和灌注液',
-        'B06': '其他血液製劑',
-        'C': '心血管系統',
-        'C01': '心臟治療',
-        'C02': '抗高血壓藥',
-        'C03': '利尿劑',
-        'C04': '周邊血管擴張劑',
-        'C05': '血管保護劑',
-        'C07': 'β-阻斷劑',
-        'C08': '鈣離子通道阻斷劑',
-        'C09': '作用於腎素-血管收縮素系統之藥物',
-        'C10': '血脂修飾劑',
-        'D': '皮膚科用藥',
-        'D01': '皮膚科用抗黴菌劑',
-        'D02': '潤膚劑和保護劑',
-        'D03': '治療傷口及潰瘍之製劑',
-        'D04': '止癢劑，包括抗組織胺、麻醉劑等',
-        'D05': '抗乾癬藥',
-        'D06': '皮膚科用抗生素和化療藥',
-        'D07': '皮膚科用皮質類固醇製劑',
-        'D08': '防腐劑和消毒劑',
-        'D09': '藥用敷料',
-        'D10': '抗痤瘡製劑',
-        'D11': '其他皮膚科製劑',
-        'G': '泌尿生殖系統與性激素',
-        'G01': '婦科抗感染藥和消毒劑',
-        'G02': '其他婦科藥物',
-        'G03': '性激素和生殖系統調節劑',
-        'G04': '泌尿科藥物',
-        'H': '全身性賀爾蒙製劑，不包括性激素和胰島素',
-        'H01': '腦下垂體及下視丘激素與類似物',
-        'H02': '全身性皮質類固醇',
-        'H03': '甲狀腺治療',
-        'H04': '胰腺激素',
-        'H05': '鈣穩態',
-        'J': '全身性抗感染劑',
-        'J01': '全身性抗菌劑',
-        'J02': '全身性抗黴菌劑',
-        'J04': '抗分枝桿菌藥',
-        'J05': '全身性抗病毒藥',
-        'J06': '免疫血清和免疫球蛋白',
-        'J07': '疫苗',
-        'L': '抗腫瘤藥及免疫調節劑',
-        'L01': '抗腫瘤藥',
-        'L02': '內分泌療法',
-        'L03': '免疫刺激劑',
-        'L04': '免疫抑制劑',
-        'M': '肌肉骨骼系統',
-        'M01': '抗發炎及抗風濕藥產品',
-        'M02': '局部用關節和肌肉痛產品',
-        'M03': '肌肉鬆弛劑',
-        'M04': '抗痛風製劑',
-        'M05': '治療骨骼疾病藥物',
-        'M09': '其他肌肉骨骼系統疾病藥物',
-        'N': '神經系統',
-        'N01': '麻醉劑',
-        'N02': '止痛藥',
-        'N03': '抗癲癇藥',
-        'N04': '抗帕金森氏症藥',
-        'N05': '精神安定劑',
-        'N06': '精神興奮劑',
-        'N07': '其他神經系統藥物',
-        'P': '抗寄生蟲產品、殺蟲劑及驅蟲劑',
-        'P01': '抗原蟲藥',
-        'P02': '驅蟲藥',
-        'P03': '殺外寄生蟲藥，包括殺疥蟲劑、殺蟲劑及驅蟲劑',
-        'R': '呼吸系統',
-        'R01': '鼻腔製劑',
-        'R02': '咽喉製劑',
-        'R03': '阻塞性呼吸道疾病用藥',
-        'R05': '咳嗽和感冒製劑',
-        'R06': '全身性抗組織胺',
-        'R07': '其他呼吸系統產品',
-        'S': '感覺器官',
-        'S01': '眼科',
-        'S02': '耳科',
-        'S03': '眼科和耳科製劑',
-        'V': '其他',
-        'V01': '過敏原',
-        'V03': '其他所有治療產品',
-        'V04': '診斷試劑',
-        'V06': '一般營養品',
-        'V07': '其他所有非治療產品',
-        'V08': '顯影劑',
-        'V09': '診斷用放射性藥物',
-        'V10': '治療用放射性藥物',
-        'V20': '手術敷料',
+        'A10AB': '注射用胰島素及其類似藥物,速效', 'A10AC': '注射用胰島素及其類似藥物,中效', 'A10AD': '注射用胰島素及其同系物,中效與快效結合的(預混型)', 
+        'A10AE': '注射用胰島素及其類似藥物,長效', 'A10AF': '注射用胰島素及其類似藥物,吸入用', 'A10BA': '雙胍類', 'A10BB': '磺胺類', 
+        'A10BD': '口服降糖藥複方', 'A10BF': '-葡萄糖苷酶抑制藥', 'A10BG': '噻唑烷二酮類(TZDs)', 'A10BH': 'DPP-4抑制劑', 'A10BJ': 'GLP-1類似物', 'A10BK': 'SGLT2抑制劑',
+        'A11': '維生素', 'A12': '礦物質補充劑', 'A13': '補品', 'A14': '系統性同化劑', 'A15': '食慾興奮劑', 'A16': '其他消化道和代謝產品',
+        
+        'B': '血液及造血器官', 'B01': '抗血栓藥', 'B02': '抗出血藥', 'B03': '抗貧血製劑', 'B05': '血液替代品和灌注液', 'B06': '其他血液製劑',
+        
+        'C': '心血管系統', 'C01': '心臟治療', 'C02': '抗高血壓藥', 'C03': '利尿劑', 'C04': '周邊血管擴張劑', 'C05': '血管保護劑',
+        'C07': 'β-阻斷劑', 'C07AA': 'β-阻斷劑,非選擇性', 'C07AB': 'β-阻斷劑,選擇性', 'C07AG': 'α及β-阻斷劑',
+        'C08': '鈣離子通道阻斷劑', 'C08CA': '二氫吡啶衍生物', 'C08DA': '苯烷基胺衍生物', 'C08DB': '苯硫氮雜卓衍生物',
+        'C09': '作用於腎素-血管收縮素系統之藥物', 'C09AA': 'ACEI抑制劑,單方', 'C09BA': 'ACEI抑制劑+利尿劑', 'C09BB': 'ACEI抑制劑+CCB', 'C09CA': 'ARB拮抗劑,單方', 'C09DA': 'ARB拮抗劑+利尿劑', 'C09DB': 'ARB拮抗劑+CCB', 'C09DX': 'ARB,其他複方',
+        'C10': '血脂修飾劑', 'C10AA': 'HMG CoA還原酶抑制劑', 'C10AB': '貝特類', 'C10AC': '膽汁酸螯合劑', 'C10AD': '菸鹼酸及其衍生物', 'C10AX': '其他降血脂藥', 'C10BA': 'HMG CoA還原酶抑制劑+其他降血脂藥', 'C10BX': 'HMG CoA還原酶抑制劑+其他複方',
+        
+        'D': '皮膚科用藥', 'D01': '皮膚科用抗黴菌劑', 'D02': '潤膚劑和保護劑', 'D03': '治療傷口及潰瘍之製劑', 'D04': '止癢劑，包括抗組織胺、麻醉劑等', 'D05': '抗乾癬藥', 'D06': '皮膚科用抗生素和化療藥',
+        'D07': '皮膚科用皮質類固醇製劑', 'D07AA': '皮質類固醇類,弱(1組)', 'D07AB': '皮質類固醇類,中強(II組)', 'D07AC': '皮質類固醇類,強(III組)', 'D07AD': '皮質類固醇類,高強(IV組)', 'D07B': '皮質類固醇+滅菌藥', 'D07C': '皮質類固醇+抗生素', 'D07X': '皮質類固醇+其他藥物',
+        'D08': '防腐劑和消毒劑', 'D09': '藥用敷料', 'D10': '抗痤瘡製劑', 'D11': '其他皮膚科製劑',
+        
+        'G': '泌尿生殖系統與性激素', 'G01': '婦科抗感染藥和消毒劑', 'G02': '其他婦科藥物', 'G03': '性激素和生殖系統調節劑', 'G04': '泌尿科藥物',
+        
+        'H': '全身性賀爾蒙製劑', 'H01': '腦下垂體及下視丘激素與類似物', 'H02': '全身性皮質類固醇', 'H03': '甲狀腺治療', 'H04': '胰腺激素', 'H05': '鈣穩態',
+        
+        'J': '全身性抗感染劑', 
+        'J01': '全身性抗菌劑', 'J01AA': '四環素類', 'J01CA': '廣譜青黴素類', 'J01CE': 'β-內酰胺酶敏感的青黴素類', 'J01CF': '耐β-內酰胺酶青黴素類', 'J01CR': '青黴素類複方(含β-內酰胺酶抑制劑)', 'J01DB': '第一代頭孢菌素', 'J01DC': '第二代頭孢菌素', 'J01DD': '第三代頭孢菌素', 'J01DE': '第四代頭孢菌素', 'J01DF': '單巴坦類', 'J01DH': '碳青黴烯類', 'J01DI': '其他頭孢菌素類', 'J01EE': '磺胺類和甲氧芐啶複方', 'J01FA': '大環內酯類', 'J01FF': '林可酰胺類', 'J01GB': '其他氨基糖苷類', 'J01MA': '氟喹諾酮類', 'J01XA': '糖肽類抗菌藥', 'J01XB': '多粘菌素類', 'J01XD': '咪唑衍生物', 'J01XX': '其他抗菌藥',
+        'J02': '全身性抗黴菌劑', 'J04': '抗分枝桿菌藥', 'J05': '全身性抗病毒藥', 'J06': '免疫血清和免疫球蛋白', 'J07': '疫苗',
+        
+        'L': '抗腫瘤藥及免疫調節劑', 'L01': '抗腫瘤藥', 'L02': '內分泌療法', 'L03': '免疫刺激劑', 'L04': '免疫抑制劑',
+        
+        'M': '肌肉骨骼系統', 'M01': '抗發炎及抗風濕藥產品', 'M02': '局部用關節和肌肉痛產品', 'M03': '肌肉鬆弛劑', 'M04': '抗痛風製劑', 'M05': '治療骨骼疾病藥物', 'M09': '其他肌肉骨骼系統疾病藥物',
+        
+        'N': '神經系統', 'N01': '麻醉劑', 'N02': '止痛藥', 'N03': '抗癲癇藥', 'N04': '抗帕金森氏症藥', 'N05': '精神安定劑', 'N06': '精神興奮劑', 'N07': '其他神經系統藥物',
+        
+        'P': '抗寄生蟲產品', 'P01': '抗原蟲藥', 'P02': '驅蟲藥', 'P03': '殺外寄生蟲藥',
+        
+        'R': '呼吸系統', 'R01': '鼻腔製劑', 'R02': '咽喉製劑', 'R03': '阻塞性呼吸道疾病用藥', 'R05': '咳嗽和感冒製劑', 'R06': '全身性抗組織胺', 'R07': '其他呼吸系統產品',
+        
+        'S': '感覺器官', 'S01': '眼科', 'S02': '耳科', 'S03': '眼科和耳科製劑',
+        
+        'V': '其他', 'V01': '過敏原', 'V03': '其他所有治療產品', 'V04': '診斷試劑', 'V06': '一般營養品', 'V07': '其他所有非治療產品', 'V08': '顯影劑', 'V09': '診斷用放射性藥物', 'V10': '治療用放射性藥物', 'V20': '手術敷料',
     };
 
     createApp({
@@ -375,13 +337,14 @@
             const loading = ref(true);
             const error = ref('');
             
-            // 視圖狀態: home, major_list, minor_list, result_list
+            // 視圖狀態: home, major_list, minor_list, sub_minor_list, result_list
             const viewMode = ref('home'); 
             const filterCategory = ref(''); 
             const currentCategoryName = ref('');
             
             const atcGroups = ref([]); 
             const selectedMajor = ref(null); 
+            const selectedMinor = ref(null); // 新增：選中的子分類 (Level 2)
 
             const fetchCsv = (url) => new Promise((resolve, reject) => {
                 Papa.parse(url, { download: true, header: true, skipEmptyLines: true, complete: (r) => resolve(r.data), error: (e) => reject(e) });
@@ -409,8 +372,6 @@
                     const code = row['藥品代碼'] ? row['藥品代碼'].trim() : '';
                     if(!code) return null;
                     
-                    // 【嚴格過濾邏輯】
-                    // 規則：6碼總長度，前4碼為英文字母，後2碼為數字
                     const isValidCode = /^[A-Za-z]{4}\d{2}$/.test(code);
                     if (!isValidCode) return null;
 
@@ -422,8 +383,8 @@
                     let isDiscontinued = (status1 === 'Y' || status2 === 'Y') && !(status1 === 'N' || status2 === 'N');
                     let isOutOfStock = (status1 === 'C' || status2 === 'C') && !isDiscontinued && !(status1 === 'N' || status2 === 'N');
 
-                    // ATC Parsing: 第1層=1碼, 第2層=3碼
-                    let atcMain = '', atcSub = '';
+                    // ATC Parsing
+                    let atcMain = '', atcSub = '', atcSubSub = '';
                     if (atc.length >= 1) {
                         const c1 = atc.substring(0, 1);
                         atcMain = ATC_DICT[c1] || `分類 ${c1}`; 
@@ -431,6 +392,10 @@
                     if (atc.length >= 3) {
                         const c3 = atc.substring(0, 3);
                         atcSub = ATC_DICT[c3] || c3; 
+                    }
+                    if (atc.length >= 5) {
+                        const c5 = atc.substring(0, 5);
+                        atcSubSub = ATC_DICT[c5] || c5; 
                     }
 
                     return {
@@ -440,7 +405,10 @@
                         pregCategory: row['懷孕分級']||'', highAlert: row['高警訊藥品'], 
                         isHighAlert: (row['高警訊藥品'] === 'Y'), isDiscontinued, isOutOfStock,
                         imgUrl: imgName ? `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/w_400,c_scale,q_auto,f_auto/${imgName}` : null,
-                        leafletLink: row['超連結']||'', atcCode: atc, atcMain, atcMainCode: atc.substring(0,1), atcSub, atcSubCode: atc.substring(0,3)
+                        leafletLink: row['超連結']||'', atcCode: atc, 
+                        atcMain, atcMainCode: atc.substring(0,1), 
+                        atcSub, atcSubCode: atc.substring(0,3),
+                        atcSubSub, atcSubSubCode: atc.substring(0,5)
                     };
                 }).filter(d => d !== null);
 
@@ -452,7 +420,6 @@
                 const groups = {}; 
 
                 data.forEach(d => {
-                    // 只建立有資料的分類
                     if (d.atcMainCode && d.atcMain) {
                         // Level 1: 1 char
                         if (!groups[d.atcMainCode]) {
@@ -461,9 +428,23 @@
                         // Level 2: 3 chars
                         if (d.atcSubCode && d.atcSub) {
                             if (!groups[d.atcMainCode].subs[d.atcSubCode]) {
-                                groups[d.atcMainCode].subs[d.atcSubCode] = { code: d.atcSubCode, name: d.atcSub, count: 0 };
+                                groups[d.atcMainCode].subs[d.atcSubCode] = { 
+                                    code: d.atcSubCode, name: d.atcSub, count: 0, 
+                                    subsubs: {}, hasSubSub: false 
+                                };
                             }
                             groups[d.atcMainCode].subs[d.atcSubCode].count++;
+
+                            // Level 3: 5 chars (只紀錄，不一定顯示，取決於數量)
+                            if (d.atcSubSubCode && d.atcSubSub) {
+                                if (!groups[d.atcMainCode].subs[d.atcSubCode].subsubs[d.atcSubSubCode]) {
+                                    groups[d.atcMainCode].subs[d.atcSubCode].subsubs[d.atcSubSubCode] = {
+                                        code: d.atcSubSubCode, name: d.atcSubSub, count: 0
+                                    };
+                                }
+                                groups[d.atcMainCode].subs[d.atcSubCode].subsubs[d.atcSubSubCode].count++;
+                                groups[d.atcMainCode].subs[d.atcSubCode].hasSubSub = true;
+                            }
                         }
                     }
                 });
@@ -485,7 +466,7 @@
                     );
                 } 
                 else if (filterCategory.value) {
-                    // 比對前3碼
+                    // 比對前綴 (支援 3碼 或 5碼)
                     result = drugs.value.filter(d => d.atcCode.startsWith(filterCategory.value));
                 }
                 else {
@@ -517,8 +498,21 @@
             };
 
             const selectMinorCategory = (sub) => {
-                filterCategory.value = sub.code;
-                currentCategoryName.value = sub.name;
+                // 判斷是否需要進第3層 (筆數>=10 且有細分類)
+                if (sub.count >= 10 && sub.hasSubSub) {
+                    selectedMinor.value = { ...sub, subsubs: Object.values(sub.subsubs).sort((a,b) => a.code.localeCompare(b.code)) };
+                    viewMode.value = 'sub_minor_list';
+                } else {
+                    // 直接顯示結果
+                    filterCategory.value = sub.code;
+                    currentCategoryName.value = sub.name;
+                    viewMode.value = 'result_list';
+                }
+            };
+
+            const selectSubMinorCategory = (subsub) => {
+                filterCategory.value = subsub.code;
+                currentCategoryName.value = subsub.name;
                 viewMode.value = 'result_list';
             };
 
@@ -542,8 +536,8 @@
 
             return {
                 keyword, filteredDrugs, selectedDrug, loading, error, 
-                viewMode, atcGroups, selectedMajor, filterCategory, currentCategoryName,
-                onSearchInput, selectMajorCategory, selectMinorCategory, resetToHome,
+                viewMode, atcGroups, selectedMajor, selectedMinor, filterCategory, currentCategoryName,
+                onSearchInput, selectMajorCategory, selectMinorCategory, selectSubMinorCategory, resetToHome,
                 openDetail, closeDetail, imageLoadError, searchNhiPrice
             };
         }
