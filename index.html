@@ -29,7 +29,7 @@
                 <i class="fa-solid fa-hospital-user mr-2"></i> 藥品查詢系統
             </h1>
             <button v-if="keyword || filterCategory || viewMode !== 'home'" @click="resetToHome" class="text-xs bg-blue-500 hover:bg-blue-400 text-white px-3 py-1 rounded-full transition border border-blue-400">
-                <i class="fa-solid fa-rotate-left mr-1"></i> 重置查詢
+                <i class="fa-solid fa-rotate-left mr-1"></i> 重置
             </button>
         </div>
 
@@ -49,7 +49,7 @@
 
         <div v-if="viewMode === 'home' && !keyword" class="mt-3">
             <button @click="viewMode = 'major_list'" class="w-full bg-blue-700 hover:bg-blue-800 text-white py-2 rounded-lg text-sm font-bold flex items-center justify-center transition shadow-sm border border-blue-500">
-                <i class="fa-solid fa-layer-group mr-2"></i> 依藥理分類瀏覽 (ATC)
+                <i class="fa-solid fa-layer-group mr-2"></i> 藥理分類查詢
             </button>
         </div>
         
@@ -81,16 +81,14 @@
 
         <div v-if="viewMode === 'major_list'" class="animate-slide-up">
             <div class="flex items-center justify-between mb-3 px-1">
-                <h3 class="font-bold text-gray-700">選擇大分類</h3>
-                <span class="text-xs text-gray-400">ATC 前3碼</span>
+                <h3 class="font-bold text-gray-700">藥理主分類</h3>
             </div>
             <div class="grid grid-cols-1 gap-2">
                 <div v-for="cat in atcGroups" :key="cat.code" 
                      @click="selectMajorCategory(cat)"
                      class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-blue-50 transition">
                     <div class="flex items-center">
-                        <span class="bg-blue-100 text-blue-700 font-mono text-xs px-2 py-1 rounded mr-3">{{ cat.code }}</span>
-                        <span class="font-bold text-gray-800">{{ cat.name }}</span>
+                        <span class="font-bold text-gray-800 text-lg">{{ cat.name }}</span>
                     </div>
                     <i class="fa-solid fa-chevron-right text-gray-300 text-sm"></i>
                 </div>
@@ -100,7 +98,7 @@
         <div v-if="viewMode === 'minor_list'" class="animate-slide-up">
             <div class="flex items-center justify-between mb-3 px-1">
                 <button @click="viewMode = 'major_list'" class="text-blue-600 text-sm font-bold flex items-center">
-                    <i class="fa-solid fa-arrow-left mr-1"></i> 返回大分類
+                    <i class="fa-solid fa-arrow-left mr-1"></i> 返回主分類
                 </button>
                 <span class="text-xs text-gray-500 font-bold">{{ selectedMajor.name }}</span>
             </div>
@@ -109,8 +107,7 @@
                      @click="selectMinorCategory(sub)"
                      class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-indigo-50 transition">
                     <div class="flex items-center">
-                        <span class="bg-indigo-100 text-indigo-700 font-mono text-xs px-2 py-1 rounded mr-3">{{ sub.code }}</span>
-                        <span class="text-gray-800">{{ sub.name }}</span>
+                        <span class="text-gray-800 font-medium">{{ sub.name }}</span>
                     </div>
                     <span class="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full">{{ sub.count }} 筆</span>
                 </div>
@@ -118,7 +115,6 @@
         </div>
 
         <div v-if="viewMode === 'result_list'" class="animate-slide-up">
-            
             <div v-if="filteredDrugs.length === 0" class="text-center py-20 text-gray-400">
                 <i class="fa-regular fa-folder-open text-4xl mb-2"></i>
                 <p>找不到符合條件的藥品</p>
@@ -148,7 +144,9 @@
                         </h3>
                         <p class="text-gray-500 text-xs font-mono mb-1 truncate">{{ drug.genericName }}</p>
                         <div v-if="drug.atcSub" class="mb-1">
-                             <span class="text-[10px] bg-indigo-50 text-indigo-600 px-1 rounded truncate inline-block max-w-full">{{ drug.atcSub }}</span>
+                             <span class="text-[10px] bg-indigo-50 text-indigo-600 px-1 rounded truncate inline-block max-w-full">
+                                {{ drug.atcSub }}
+                             </span>
                         </div>
                         <p class="text-gray-800 text-xs line-clamp-2 bg-gray-50 p-1 rounded">{{ drug.indication }}</p>
                     </div>
@@ -186,14 +184,14 @@
                 </div>
 
                 <section v-if="selectedDrug.atcCode" class="bg-indigo-50 rounded-xl p-3 border border-indigo-100">
-                    <h3 class="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-2">藥理分類 (ATC: {{selectedDrug.atcCode}})</h3>
+                    <h3 class="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-2">藥理分類</h3>
                     <div class="space-y-2">
                         <div v-if="selectedDrug.atcMain" class="flex items-center gap-2 p-1">
-                            <span class="bg-indigo-200 text-indigo-800 text-xs px-2 py-0.5 rounded-full font-mono">{{ selectedDrug.atcMainCode }}</span>
+                            <span class="bg-indigo-200 text-indigo-800 text-xs px-2 py-0.5 rounded-full font-bold">主分類</span>
                             <span class="text-sm font-bold text-indigo-900">{{ selectedDrug.atcMain }}</span>
                         </div>
                         <div v-if="selectedDrug.atcSub" class="flex items-center gap-2 ml-2 border-l-2 border-indigo-200 pl-2 p-1">
-                            <span class="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full font-mono">{{ selectedDrug.atcSubCode }}</span>
+                            <span class="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full font-bold">子分類</span>
                             <span class="text-sm text-indigo-800">{{ selectedDrug.atcSub }}</span>
                         </div>
                     </div>
@@ -255,21 +253,55 @@
     const CLOUDINARY_CLOUD_NAME = 'de02nbokt'; 
     // ==========================================
 
-    // ATC 中文對照表 (完整版)
+    // ATC 中文對照表 (依據要求更新：層級1為1碼，層級2為3碼)
     const ATC_DICT = {
-        'A02': '制酸劑與抗脹氣藥', 'A02B': '治療消化性潰瘍藥', 'A03': '功能性胃腸道異常', 'A03F': '腸胃道蠕動促進劑',
-        'A07': '止瀉劑', 'A07E': '腸道抗發炎藥', 'A10': '糖尿病用藥', 'A10A': '胰島素', 'A10B': '口服降血糖藥',
-        'B01': '抗血栓藥', 'B01A': '抗血栓形成藥', 'B03': '抗貧血藥',
-        'C01': '心臟治療藥', 'C01B': '抗心律不整藥', 'C03': '利尿劑', 'C07': 'β-阻斷劑', 
-        'C08': '鈣離子通道阻斷劑', 'C09': 'ACEI/ARB 系統用藥', 'C09A': 'ACEI 抑制劑', 'C09C': 'ARB 拮抗劑', 'C10': '降血脂藥',
-        'D01': '皮膚抗黴菌藥', 'D07': '皮膚類固醇', 'G03': '性荷爾蒙', 'G04': '泌尿道用藥', 'H02': '全身性皮質類固醇',
-        'J01': '全身性抗菌劑', 'J01C': 'Penicillin類', 'J01D': 'Cephalosporin類', 'J01F': 'Macrolides類', 'J01M': 'Quinolones類',
-        'J02': '全身性抗黴菌劑', 'J05': '抗病毒藥', 'L01': '抗腫瘤藥', 'L04': '免疫抑制劑',
-        'M01': '抗發炎及抗風濕藥', 'M01A': 'NSAIDs 非類固醇消炎止痛藥', 'M03': '肌肉鬆弛劑', 'M04': '抗痛風藥', 'M05': '骨骼疾病治療藥',
-        'N02': '止痛藥', 'N02A': '鴉片類止痛藥', 'N02B': '非鴉片類止痛藥', 'N03': '抗癲癇藥', 'N04': '抗巴金森氏症藥',
-        'N05': '精神安定藥', 'N05A': '抗精神病藥', 'N05B': '抗焦慮藥', 'N05C': '安眠鎮靜藥', 'N06': '精神興奮藥', 'N06A': '抗憂鬱藥',
-        'R01': '鼻用製劑', 'R03': '阻塞性呼吸道疾病', 'R05': '咳嗽與感冒用藥', 'R06': '抗組織胺',
-        'S01': '眼科用藥', 'S01E': '青光眼用藥', 'S01F': '散瞳劑', 'V03': '解毒劑', 'V08': '顯影劑'
+        // Level 1 (大分類) - 1碼
+        'A': '消化道及新陳代謝系統',
+        'B': '血液及造血器官系統',
+        'C': '心血管系統',
+        'D': '皮膚科用藥',
+        'G': '泌尿生殖系統與性荷爾蒙',
+        'H': '全身性荷爾蒙製劑 (不含性荷爾蒙)',
+        'J': '全身性抗感染劑',
+        'L': '抗腫瘤及免疫調節劑',
+        'M': '肌肉骨骼系統',
+        'N': '神經系統',
+        'P': '抗寄生蟲藥',
+        'R': '呼吸系統',
+        'S': '感覺器官',
+        'V': '其他類',
+
+        // Level 2 (子分類) - 3碼
+        'A01': '口腔用藥', 'A02': '制酸劑與抗脹氣藥', 'A03': '功能性胃腸道異常', 'A04': '止吐劑',
+        'A05': '膽道與肝臟用藥', 'A06': '便秘用藥', 'A07': '止瀉劑', 'A10': '糖尿病用藥', 'A11': '維生素', 'A12': '礦物質',
+        
+        'B01': '抗血栓藥', 'B02': '止血藥', 'B03': '抗貧血藥', 'B05': '血液代用劑與輸注液',
+
+        'C01': '心臟治療藥', 'C02': '降血壓藥', 'C03': '利尿劑', 'C04': '周邊血管擴張劑', 
+        'C05': '血管保護劑', 'C07': 'β-阻斷劑', 'C08': '鈣離子通道阻斷劑', 'C09': 'ACEI/ARB 系統用藥', 'C10': '降血脂藥',
+
+        'D01': '皮膚抗黴菌藥', 'D02': '保濕劑與保護劑', 'D05': '乾癬用藥', 'D06': '皮膚抗生素與化療藥',
+        'D07': '皮膚類固醇', 'D08': '消毒劑', 'D10': '抗痘藥',
+
+        'G01': '婦科抗感染藥', 'G02': '其他婦科用藥', 'G03': '性荷爾蒙', 'G04': '泌尿道用藥',
+
+        'H01': '腦下垂體及下視丘荷爾蒙', 'H02': '全身性皮質類固醇', 'H03': '甲狀腺用藥',
+
+        'J01': '全身性抗菌劑', 'J02': '全身性抗黴菌劑', 'J04': '抗結核病藥', 'J05': '抗病毒藥', 'J06': '免疫血清與球蛋白', 'J07': '疫苗',
+
+        'L01': '抗腫瘤藥', 'L02': '內分泌療法', 'L03': '免疫刺激劑', 'L04': '免疫抑制劑',
+
+        'M01': '抗發炎及抗風濕藥', 'M02': '外用關節肌肉痛藥', 'M03': '肌肉鬆弛劑', 'M04': '抗痛風藥', 'M05': '骨骼疾病治療藥',
+
+        'N01': '麻醉劑', 'N02': '止痛藥', 'N03': '抗癲癇藥', 'N04': '抗巴金森氏症藥', 'N05': '精神安定藥', 'N06': '精神興奮藥', 'N07': '其他神經系統藥',
+
+        'P01': '抗原蟲藥', 'P02': '驅蟲藥',
+
+        'R01': '鼻用製劑', 'R02': '喉部用藥', 'R03': '阻塞性呼吸道疾病', 'R05': '咳嗽與感冒用藥', 'R06': '抗組織胺',
+
+        'S01': '眼科用藥', 'S02': '耳科用藥', 'S03': '眼耳製劑',
+
+        'V03': '解毒劑', 'V04': '診斷用藥', 'V08': '顯影劑', 'V09': '診斷用放射製劑'
     };
 
     createApp({
@@ -280,21 +312,17 @@
             const loading = ref(true);
             const error = ref('');
             
-            // 視圖狀態管理
-            // home: 首頁, major_list: 顯示大分類, minor_list: 顯示子分類, result_list: 顯示藥品列表
+            // 視圖狀態: home, major_list, minor_list, result_list
             const viewMode = ref('home'); 
-            const filterCategory = ref(''); // 儲存目前的篩選 ATC 代碼 (子分類)
+            const filterCategory = ref(''); 
             const currentCategoryName = ref('');
             
-            // 分類資料結構
-            const atcGroups = ref([]); // 大分類列表
-            const selectedMajor = ref(null); // 目前選中的大分類物件
+            const atcGroups = ref([]); 
+            const selectedMajor = ref(null); 
 
-            const fetchCsv = (url) => {
-                return new Promise((resolve, reject) => {
-                    Papa.parse(url, { download: true, header: true, skipEmptyLines: true, complete: (results) => resolve(results.data), error: (err) => reject(err) });
-                });
-            };
+            const fetchCsv = (url) => new Promise((resolve, reject) => {
+                Papa.parse(url, { download: true, header: true, skipEmptyLines: true, complete: (r) => resolve(r.data), error: (e) => reject(e) });
+            });
 
             const fetchAllData = () => {
                 loading.value = true;
@@ -308,7 +336,7 @@
                         loading.value = false;
                     })
                     .catch(err => {
-                        error.value = "資料載入失敗，請檢查網路或連結設定。";
+                        error.value = "資料載入失敗。";
                         loading.value = false;
                     });
             };
@@ -326,15 +354,15 @@
                     let isDiscontinued = (status1 === 'Y' || status2 === 'Y') && !(status1 === 'N' || status2 === 'N');
                     let isOutOfStock = (status1 === 'C' || status2 === 'C') && !isDiscontinued && !(status1 === 'N' || status2 === 'N');
 
-                    // ATC Parsing
+                    // ATC Parsing: 第1層=1碼, 第2層=3碼
                     let atcMain = '', atcSub = '';
+                    if (atc.length >= 1) {
+                        const c1 = atc.substring(0, 1);
+                        atcMain = ATC_DICT[c1] || `分類 ${c1}`; 
+                    }
                     if (atc.length >= 3) {
                         const c3 = atc.substring(0, 3);
-                        atcMain = ATC_DICT[c3] || c3; // 如果字典沒查到就顯示代碼
-                    }
-                    if (atc.length >= 5) {
-                        const c5 = atc.substring(0, 5);
-                        atcSub = ATC_DICT[c5] || c5;
+                        atcSub = ATC_DICT[c3] || c3; 
                     }
 
                     return {
@@ -344,7 +372,7 @@
                         pregCategory: row['懷孕分級']||'', highAlert: row['高警訊藥品'], 
                         isHighAlert: (row['高警訊藥品'] === 'Y'), isDiscontinued, isOutOfStock,
                         imgUrl: imgName ? `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/w_400,c_scale,q_auto,f_auto/${imgName}` : null,
-                        leafletLink: row['超連結']||'', atcCode: atc, atcMain, atcMainCode: atc.substring(0,3), atcSub, atcSubCode: atc.substring(0,5)
+                        leafletLink: row['超連結']||'', atcCode: atc, atcMain, atcMainCode: atc.substring(0,1), atcSub, atcSubCode: atc.substring(0,3)
                     };
                 }).filter(d => d !== null);
 
@@ -352,17 +380,17 @@
                 buildAtcTree(processed);
             };
 
-            // 建立 ATC 分類樹 (只建立有藥品的分類)
             const buildAtcTree = (data) => {
-                const groups = {}; // { 'A02': { code: 'A02', name: '...', subs: { 'A02BC': {...} } } }
+                const groups = {}; 
 
                 data.forEach(d => {
+                    // 只建立有資料的分類
                     if (d.atcMainCode && d.atcMain) {
-                        // Level 3 (大分類)
+                        // Level 1: 1 char
                         if (!groups[d.atcMainCode]) {
                             groups[d.atcMainCode] = { code: d.atcMainCode, name: d.atcMain, subs: {} };
                         }
-                        // Level 5 (子分類)
+                        // Level 2: 3 chars
                         if (d.atcSubCode && d.atcSub) {
                             if (!groups[d.atcMainCode].subs[d.atcSubCode]) {
                                 groups[d.atcMainCode].subs[d.atcSubCode] = { code: d.atcSubCode, name: d.atcSub, count: 0 };
@@ -372,15 +400,12 @@
                     }
                 });
 
-                // 轉為陣列並排序
                 atcGroups.value = Object.values(groups).sort((a,b) => a.code.localeCompare(b.code));
             };
 
-            // 核心過濾邏輯
             const filteredDrugs = computed(() => {
                 let result = [];
                 
-                // 1. 如果有關鍵字，直接全域搜尋 (忽略分類模式)
                 if (keyword.value) {
                     const k = keyword.value.toLowerCase().trim();
                     result = drugs.value.filter(d => 
@@ -391,11 +416,10 @@
                         (d.atcCode && d.atcCode.toLowerCase().includes(k))
                     );
                 } 
-                // 2. 如果沒有關鍵字，但有選分類
                 else if (filterCategory.value) {
+                    // 比對前3碼
                     result = drugs.value.filter(d => d.atcCode.startsWith(filterCategory.value));
                 }
-                // 3. 都沒有 -> 回傳空陣列 (首頁不顯示)
                 else {
                     return [];
                 }
@@ -410,11 +434,10 @@
                 });
             });
 
-            // 使用者操作函數
             const onSearchInput = () => {
                 if(keyword.value) {
                     viewMode.value = 'result_list';
-                    filterCategory.value = ''; // 搜尋時清除分類
+                    filterCategory.value = ''; 
                 } else {
                     viewMode.value = 'home';
                 }
