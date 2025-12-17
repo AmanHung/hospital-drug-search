@@ -17,11 +17,20 @@
         [v-cloak] { display: none; }
         .animate-slide-up { animation: slideUp 0.3s ease-out; }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        
+        /* 錯誤提示框樣式優化 */
+        .error-modal { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 100; background: #fee2e2; border: 1px solid #ef4444; color: #b91c1c; padding: 1rem; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 90%; text-align: center; }
     </style>
 </head>
 <body>
 
 <div id="app" v-cloak class="max-w-md mx-auto bg-white min-h-screen relative flex flex-col">
+
+    <div v-if="error" class="error-modal">
+        <p class="font-bold mb-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i> 系統訊息</p>
+        <p class="text-sm">{{ error }}</p>
+        <button @click="error = ''" class="mt-2 text-xs bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded border border-red-300">關閉</button>
+    </div>
 
     <header class="sticky top-0 bg-blue-600 p-4 shadow-md z-30">
         <div class="flex justify-between items-center mb-2">
@@ -53,7 +62,7 @@
             </button>
         </div>
         
-        <div v-if="viewMode === 'result_list' && filterCategory" class="mt-2 text-white text-xs flex items-center overflow-hidden">
+        <div v-if="(viewMode === 'result_list' || viewMode === 'sub_minor_list') && filterCategory" class="mt-2 text-white text-xs flex items-center overflow-hidden">
             <span class="opacity-70">分類：</span>
             <span class="font-bold truncate ml-1 bg-blue-800 px-2 py-0.5 rounded">{{ currentCategoryName }}</span>
         </div>
@@ -66,12 +75,7 @@
             <p>正在同步資料庫...</p>
         </div>
 
-        <div v-if="error" class="text-center py-20 text-red-500 px-4">
-            <i class="fa-solid fa-triangle-exclamation text-3xl mb-2"></i>
-            <p>{{ error }}</p>
-        </div>
-
-        <div v-if="!loading && !error && viewMode === 'home' && !keyword" class="flex flex-col items-center justify-center py-20 text-gray-400">
+        <div v-if="!loading && viewMode === 'home' && !keyword" class="flex flex-col items-center justify-center py-20 text-gray-400">
             <div class="bg-gray-100 p-6 rounded-full mb-4">
                 <i class="fa-solid fa-magnifying-glass text-4xl text-gray-300"></i>
             </div>
@@ -110,6 +114,25 @@
                         <span class="text-gray-800 font-medium">{{ sub.name }}</span>
                     </div>
                     <span class="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full">{{ sub.count }} 筆</span>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="viewMode === 'sub_minor_list'" class="animate-slide-up">
+            <div class="flex items-center justify-between mb-3 px-1">
+                <button @click="viewMode = 'minor_list'" class="text-blue-600 text-sm font-bold flex items-center">
+                    <i class="fa-solid fa-arrow-left mr-1"></i> 返回子分類
+                </button>
+                <span class="text-xs text-gray-500 font-bold">{{ selectedMinor.name }}</span>
+            </div>
+            <div class="grid grid-cols-1 gap-2">
+                <div v-for="subsub in selectedMinor.subsubs" :key="subsub.code" 
+                     @click="selectSubMinorCategory(subsub)"
+                     class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-green-50 transition">
+                    <div class="flex items-center">
+                        <span class="text-gray-800 font-medium">{{ subsub.name }}</span>
+                    </div>
+                    <span class="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full">{{ subsub.count }} 筆</span>
                 </div>
             </div>
         </div>
@@ -200,13 +223,9 @@
                             <span class="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full font-bold">子分類</span>
                             <span class="text-sm text-indigo-800">{{ selectedDrug.atcSub }}</span>
                         </div>
-                        <div v-if="selectedDrug.atcGroup" class="flex items-center gap-2 ml-4 border-l-2 border-green-200 pl-2 p-1">
-                            <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-bold">藥理組</span>
-                            <span class="text-sm text-green-800">{{ selectedDrug.atcGroup }}</span>
-                        </div>
-                         <div v-if="selectedDrug.atcSubSub" class="flex items-center gap-2 ml-6 border-l-2 border-gray-200 pl-2 p-1">
-                            <span class="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full font-bold">細分類</span>
-                            <span class="text-sm text-gray-700">{{ selectedDrug.atcSubSub }}</span>
+                        <div v-if="selectedDrug.atcSubSub" class="flex items-center gap-2 ml-4 border-l-2 border-green-200 pl-2 p-1">
+                            <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-bold">細分類</span>
+                            <span class="text-sm text-green-800">{{ selectedDrug.atcSubSub }}</span>
                         </div>
                     </div>
                 </section>
@@ -261,14 +280,13 @@
 <script>
     const { createApp, ref, computed, onMounted } = Vue;
 
-    // ============== 資料來源設定 ==============
+    // ============== 資料來源 ==============
     const DRUG_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTl_HoBeP0qBD79IB7Ulp_xAMRX4Gyx65pgU-4Kf15Lu4g4FqGdVBDSn1BEI6sNXht889zjRx6RErb-/pub?output=csv';
     const ATC_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSMhr-Ocv4uEN6virOvzsEY-c1-tCEs-e1lB-fvB9d2U2XCtcDaHnLnob_Vu6Ktjce4YErY9y6FuaxD/pub?output=csv';
     const CLOUDINARY_CLOUD_NAME = 'de02nbokt'; 
-    // ==========================================
+    // ======================================
 
-    // *** 完整 ATC 中文對照表 (整合了 1碼, 3碼, 4碼, 5碼) ***
-    [cite_start]// [cite: 85, 30, 10, 16, 17, 300, 302, 357, 402, 505, 595, 650, 769, 818, 885, 947]
+    // *** 完整 ATC 字典 (由您提供的 PDF 解析整合) ***
     const ATC_DICT = {
         'A': '消化道及代謝', 'A01': '口腔病用藥', 'A01A': '口腔病用藥', 'A01AA': '預防齲齒藥', 'A01AB': '局部口腔治療用抗感染藥及防腐劑', 'A01AC': '局部口腔治療用皮質類固醇', 'A01AD': '其他局部口腔治療用藥',
         'A02': '胃酸相關疾病治療藥', 'A02A': '制酸劑', 'A02AA': '鎂化合物', 'A02AB': '鋁化合物', 'A02AC': '鈣化合物', 'A02AD': '鋁、鈣、鎂化合物之複方', 'A02AF': '制酸劑與消脹氣藥之複方', 'A02AH': '配有碳酸氫鈉的抗酸藥', 'A02AX': '其他制酸劑複方',
@@ -380,14 +398,13 @@
             const loading = ref(true);
             const error = ref('');
             
-            // 視圖狀態
+            // 視圖狀態 (移除 'sub_minor_list')
             const viewMode = ref('home'); 
             const filterCategory = ref(''); 
             const currentCategoryName = ref('');
             
             const atcGroups = ref([]); 
             const selectedMajor = ref(null); 
-            const selectedMinor = ref(null); 
 
             const fetchCsv = (url) => new Promise((resolve, reject) => {
                 Papa.parse(url, { download: true, header: true, skipEmptyLines: true, complete: (r) => resolve(r.data), error: (e) => reject(e) });
@@ -426,6 +443,7 @@
                     let isDiscontinued = (status1 === 'Y' || status2 === 'Y') && !(status1 === 'N' || status2 === 'N');
                     let isOutOfStock = (status1 === 'C' || status2 === 'C') && !isDiscontinued && !(status1 === 'N' || status2 === 'N');
 
+                    // ATC Parsing: 第1層(1碼), 第2層(3碼), 第3層(4碼), 第4層(5碼)
                     let atcMain = '', atcSub = '', atcGroup = '', atcSubSub = '';
                     if (atc.length >= 1) {
                         const c1 = atc.substring(0, 1);
@@ -435,6 +453,7 @@
                         const c3 = atc.substring(0, 3);
                         atcSub = ATC_DICT[c3] || c3; 
                     }
+                    // 新增 4碼 解析 (用於分組標題)
                     if (atc.length >= 4) {
                         const c4 = atc.substring(0, 4);
                         atcGroup = ATC_DICT[c4] || c4;
@@ -454,7 +473,7 @@
                         leafletLink: row['超連結']||'', atcCode: atc, 
                         atcMain, atcMainCode: atc.substring(0,1), 
                         atcSub, atcSubCode: atc.substring(0,3),
-                        atcGroup, atcGroupCode: atc.substring(0,4),
+                        atcGroup, atcGroupCode: atc.substring(0,4), // 4碼名稱與代碼
                         atcSubSub, atcSubSubCode: atc.substring(0,5)
                     };
                 }).filter(d => d !== null);
@@ -495,18 +514,26 @@
                         (d.atcCode && d.atcCode.toLowerCase().includes(k))
                     );
                 } else if (filterCategory.value) {
+                    // 比對前綴 (支援 3碼)
                     result = drugs.value.filter(d => d.atcCode.startsWith(filterCategory.value));
                 } else {
                     return [];
                 }
+                // 排序：先比 ATC 5碼，再比原本的邏輯
                 return result.sort((a, b) => {
-                    // Sort by ATC code
                     if (a.atcCode < b.atcCode) return -1;
                     if (a.atcCode > b.atcCode) return 1;
-                    return 0;
+                    
+                    const getScore = (drug) => {
+                        if (drug.isDiscontinued) return 3;
+                        if (drug.isOutOfStock) return 2;
+                        return 1;
+                    };
+                    return getScore(a) - getScore(b);
                 });
             });
 
+            // 分組邏輯更新：使用 ATC 4碼 (Level 3)
             const groupedDrugs = computed(() => {
                 const list = filteredDrugs.value;
                 if (keyword.value) {
@@ -516,7 +543,12 @@
                 list.forEach(drug => {
                     // Group by ATC 4-level code
                     let groupCode = drug.atcGroupCode || 'Other';
-                    let groupName = ATC_DICT[groupCode] || groupCode; 
+                    
+                    // 優先顯示 ATC 4碼中文名稱，若無則顯示 5碼中文，再無則顯示英文或代碼
+                    let groupName = ATC_DICT[groupCode] || 
+                                    ATC_DICT[drug.atcSubSubCode] || 
+                                    groupCode; 
+
                     if (!groups[groupCode]) {
                         groups[groupCode] = { code: groupCode, name: groupName, drugs: [] };
                     }
@@ -535,6 +567,7 @@
             };
 
             const selectMinorCategory = (sub) => {
+                // 直接進入結果列表 (不顯示第三層)
                 filterCategory.value = sub.code;
                 currentCategoryName.value = sub.name;
                 viewMode.value = 'result_list';
@@ -556,7 +589,7 @@
 
             return {
                 keyword, filteredDrugs, groupedDrugs, selectedDrug, loading, error, 
-                viewMode, atcGroups, selectedMajor, selectedMinor, filterCategory, currentCategoryName,
+                viewMode, atcGroups, selectedMajor, filterCategory, currentCategoryName,
                 onSearchInput, selectMajorCategory, selectMinorCategory, resetToHome,
                 openDetail, closeDetail, imageLoadError, searchNhiPrice
             };
