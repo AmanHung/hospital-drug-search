@@ -53,7 +53,7 @@
             </button>
         </div>
         
-        <div v-if="(viewMode === 'result_list' || viewMode === 'sub_minor_list') && filterCategory" class="mt-2 text-white text-xs flex items-center overflow-hidden">
+        <div v-if="viewMode === 'result_list' && filterCategory" class="mt-2 text-white text-xs flex items-center overflow-hidden">
             <span class="opacity-70">分類：</span>
             <span class="font-bold truncate ml-1 bg-blue-800 px-2 py-0.5 rounded">{{ currentCategoryName }}</span>
         </div>
@@ -109,72 +109,52 @@
                     <div class="flex items-center">
                         <span class="text-gray-800 font-medium">{{ sub.name }}</span>
                     </div>
-                    <div v-if="sub.count >= 10 && sub.hasSubSub" class="flex items-center text-gray-400">
-                        <span class="text-xs mr-2">{{ sub.count }} 筆</span>
-                        <i class="fa-solid fa-chevron-right text-sm"></i>
-                    </div>
-                    <span v-else class="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full">{{ sub.count }} 筆</span>
-                </div>
-            </div>
-        </div>
-
-        <div v-if="viewMode === 'sub_minor_list'" class="animate-slide-up">
-            <div class="flex items-center justify-between mb-3 px-1">
-                <button @click="viewMode = 'minor_list'" class="text-blue-600 text-sm font-bold flex items-center">
-                    <i class="fa-solid fa-arrow-left mr-1"></i> 返回子分類
-                </button>
-                <span class="text-xs text-gray-500 font-bold">{{ selectedMinor.name }}</span>
-            </div>
-            <div class="grid grid-cols-1 gap-2">
-                <div v-for="subsub in selectedMinor.subsubs" :key="subsub.code" 
-                     @click="selectSubMinorCategory(subsub)"
-                     class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-green-50 transition">
-                    <div class="flex items-center">
-                        <span class="text-gray-800 font-medium">{{ subsub.name }}</span>
-                    </div>
-                    <span class="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full">{{ subsub.count }} 筆</span>
+                    <span class="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full">{{ sub.count }} 筆</span>
                 </div>
             </div>
         </div>
 
         <div v-if="viewMode === 'result_list'" class="animate-slide-up">
-            <div v-if="filteredDrugs.length === 0" class="text-center py-20 text-gray-400">
+            <div v-if="groupedDrugs.length === 0" class="text-center py-20 text-gray-400">
                 <i class="fa-regular fa-folder-open text-4xl mb-2"></i>
                 <p>找不到符合條件的藥品</p>
             </div>
 
-            <div 
-                v-for="drug in filteredDrugs" 
-                :key="drug.code" 
-                @click="openDetail(drug)"
-                class="bg-white rounded-xl p-3 mb-3 card-shadow border border-gray-100 active:bg-blue-50 transition-colors cursor-pointer relative overflow-hidden"
-                :class="{'opacity-60': drug.isDiscontinued}"
-            >
-                <div class="absolute top-0 right-0 flex">
-                    <span v-if="drug.isHighAlert" class="bg-red-500 text-white text-[10px] px-2 py-1 font-bold rounded-bl-lg shadow-sm">高警訊</span>
-                    <span v-if="drug.isDiscontinued" class="bg-gray-500 text-white text-[10px] px-2 py-1 font-bold rounded-bl-lg ml-1 shadow-sm">已停用</span>
-                    <span v-if="drug.isOutOfStock" class="bg-orange-500 text-white text-[10px] px-2 py-1 font-bold rounded-bl-lg ml-1 shadow-sm">缺貨中</span>
+            <div v-for="group in groupedDrugs" :key="group.code" class="mb-5">
+                
+                <div v-if="filterCategory" class="sticky top-[70px] z-10 bg-gray-100/95 backdrop-blur-sm border-l-4 border-blue-500 px-3 py-2 text-sm font-bold text-gray-700 rounded-r shadow-sm flex items-center mb-2">
+                    <span class="bg-gray-600 text-white text-[10px] px-1.5 py-0.5 rounded mr-2 font-mono">{{ group.code }}</span>
+                    <span>{{ group.name }}</span>
+                </div>
+                <div v-else class="px-2 mb-2 text-gray-500 text-xs font-bold">
+                    {{ group.name }}
                 </div>
 
-                <div class="flex items-start mt-2">
-                    <div class="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 mr-3 overflow-hidden border flex items-center justify-center">
-                        <img v-if="drug.imgUrl" :src="drug.imgUrl" class="w-full h-full object-cover" loading="lazy" @error="imageLoadError">
-                        <i v-else class="fa-solid fa-pills text-gray-300 text-2xl"></i>
+                <div 
+                    v-for="drug in group.drugs" 
+                    :key="drug.code" 
+                    @click="openDetail(drug)"
+                    class="bg-white rounded-xl p-3 mb-3 card-shadow border border-gray-100 active:bg-blue-50 transition-colors cursor-pointer relative overflow-hidden"
+                    :class="{'opacity-60': drug.isDiscontinued}"
+                >
+                    <div class="absolute top-0 right-0 flex">
+                        <span v-if="drug.isHighAlert" class="bg-red-500 text-white text-[10px] px-2 py-1 font-bold rounded-bl-lg shadow-sm">高警訊</span>
+                        <span v-if="drug.isDiscontinued" class="bg-gray-500 text-white text-[10px] px-2 py-1 font-bold rounded-bl-lg ml-1 shadow-sm">已停用</span>
+                        <span v-if="drug.isOutOfStock" class="bg-orange-500 text-white text-[10px] px-2 py-1 font-bold rounded-bl-lg ml-1 shadow-sm">缺貨中</span>
                     </div>
-                    <div class="flex-1 min-w-0">
-                        <h3 class="font-bold text-base leading-tight mb-1 truncate pr-14" :class="drug.isDiscontinued ? 'text-gray-500 line-through' : 'text-blue-800'">
-                            {{ drug.tradeName }}
-                        </h3>
-                        <p class="text-gray-500 text-xs font-mono mb-1 truncate">{{ drug.genericName }}</p>
-                        <div class="mb-1">
-                             <span v-if="drug.atcSubSub" class="text-[10px] bg-green-50 text-green-600 px-1 rounded truncate inline-block max-w-full">
-                                {{ drug.atcSubSub }}
-                             </span>
-                             <span v-else-if="drug.atcSub" class="text-[10px] bg-indigo-50 text-indigo-600 px-1 rounded truncate inline-block max-w-full">
-                                {{ drug.atcSub }}
-                             </span>
+
+                    <div class="flex items-start mt-2">
+                        <div class="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 mr-3 overflow-hidden border flex items-center justify-center">
+                            <img v-if="drug.imgUrl" :src="drug.imgUrl" class="w-full h-full object-cover" loading="lazy" @error="imageLoadError">
+                            <i v-else class="fa-solid fa-pills text-gray-300 text-2xl"></i>
                         </div>
-                        <p class="text-gray-800 text-xs line-clamp-2 bg-gray-50 p-1 rounded">{{ drug.indication }}</p>
+                        <div class="flex-1 min-w-0">
+                            <h3 class="font-bold text-base leading-tight mb-1 truncate pr-14" :class="drug.isDiscontinued ? 'text-gray-500 line-through' : 'text-blue-800'">
+                                {{ drug.tradeName }}
+                            </h3>
+                            <p class="text-gray-500 text-xs font-mono mb-1 truncate">{{ drug.genericName }}</p>
+                            <p class="text-gray-800 text-xs line-clamp-2 bg-gray-50 p-1 rounded">{{ drug.indication }}</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -378,14 +358,13 @@
             const loading = ref(true);
             const error = ref('');
             
-            // 視圖狀態: home, major_list, minor_list, sub_minor_list, result_list
+            // 視圖狀態: home, major_list, minor_list, result_list
             const viewMode = ref('home'); 
             const filterCategory = ref(''); 
             const currentCategoryName = ref('');
             
             const atcGroups = ref([]); 
             const selectedMajor = ref(null); 
-            const selectedMinor = ref(null); // 新增：選中的子分類 (Level 2)
 
             const fetchCsv = (url) => new Promise((resolve, reject) => {
                 Papa.parse(url, { download: true, header: true, skipEmptyLines: true, complete: (r) => resolve(r.data), error: (e) => reject(e) });
@@ -424,7 +403,7 @@
                     let isDiscontinued = (status1 === 'Y' || status2 === 'Y') && !(status1 === 'N' || status2 === 'N');
                     let isOutOfStock = (status1 === 'C' || status2 === 'C') && !isDiscontinued && !(status1 === 'N' || status2 === 'N');
 
-                    // ATC Parsing
+                    // ATC Parsing: 第1層=1碼, 第2層=3碼, 第3層=5碼
                     let atcMain = '', atcSub = '', atcSubSub = '';
                     if (atc.length >= 1) {
                         const c1 = atc.substring(0, 1);
@@ -462,30 +441,16 @@
 
                 data.forEach(d => {
                     if (d.atcMainCode && d.atcMain) {
-                        // Level 1: 1 char
+                        // Level 1
                         if (!groups[d.atcMainCode]) {
                             groups[d.atcMainCode] = { code: d.atcMainCode, name: d.atcMain, subs: {} };
                         }
-                        // Level 2: 3 chars
+                        // Level 2
                         if (d.atcSubCode && d.atcSub) {
                             if (!groups[d.atcMainCode].subs[d.atcSubCode]) {
-                                groups[d.atcMainCode].subs[d.atcSubCode] = { 
-                                    code: d.atcSubCode, name: d.atcSub, count: 0, 
-                                    subsubs: {}, hasSubSub: false 
-                                };
+                                groups[d.atcMainCode].subs[d.atcSubCode] = { code: d.atcSubCode, name: d.atcSub, count: 0 };
                             }
                             groups[d.atcMainCode].subs[d.atcSubCode].count++;
-
-                            // Level 3: 5 chars (只紀錄，不一定顯示，取決於數量)
-                            if (d.atcSubSubCode && d.atcSubSub) {
-                                if (!groups[d.atcMainCode].subs[d.atcSubCode].subsubs[d.atcSubSubCode]) {
-                                    groups[d.atcMainCode].subs[d.atcSubCode].subsubs[d.atcSubSubCode] = {
-                                        code: d.atcSubSubCode, name: d.atcSubSub, count: 0
-                                    };
-                                }
-                                groups[d.atcMainCode].subs[d.atcSubCode].subsubs[d.atcSubSubCode].count++;
-                                groups[d.atcMainCode].subs[d.atcSubCode].hasSubSub = true;
-                            }
                         }
                     }
                 });
@@ -524,6 +489,41 @@
                 });
             });
 
+            // 新增：將藥品列表依照 ATC 5碼分組
+            const groupedDrugs = computed(() => {
+                const list = filteredDrugs.value;
+                
+                // 如果是關鍵字搜尋模式，不進行分組 (直接傳回單一組)
+                if (keyword.value) {
+                    return [{ code: 'SEARCH', name: `搜尋結果 (${list.length} 筆)`, drugs: list }];
+                }
+
+                // 如果是分類瀏覽模式，進行 ATC 5碼分組
+                const groups = {};
+                list.forEach(drug => {
+                    // 優先使用 5碼，若無則用 3碼 或 'Other'
+                    let groupCode = drug.atcSubSubCode || drug.atcSubCode || 'Other';
+                    let groupName = drug.atcSubSub || drug.atcSub || '其他';
+
+                    // 嘗試從字典找中文名 (再次確保)
+                    if (ATC_DICT[groupCode]) {
+                        groupName = ATC_DICT[groupCode];
+                    }
+
+                    if (!groups[groupCode]) {
+                        groups[groupCode] = {
+                            code: groupCode,
+                            name: groupName,
+                            drugs: []
+                        };
+                    }
+                    groups[groupCode].drugs.push(drug);
+                });
+
+                // 將物件轉陣列並依照代碼排序
+                return Object.values(groups).sort((a, b) => a.code.localeCompare(b.code));
+            });
+
             const onSearchInput = () => {
                 if(keyword.value) {
                     viewMode.value = 'result_list';
@@ -539,21 +539,9 @@
             };
 
             const selectMinorCategory = (sub) => {
-                // 判斷是否需要進第3層 (筆數>=10 且有細分類)
-                if (sub.count >= 10 && sub.hasSubSub) {
-                    selectedMinor.value = { ...sub, subsubs: Object.values(sub.subsubs).sort((a,b) => a.code.localeCompare(b.code)) };
-                    viewMode.value = 'sub_minor_list';
-                } else {
-                    // 直接顯示結果
-                    filterCategory.value = sub.code;
-                    currentCategoryName.value = sub.name;
-                    viewMode.value = 'result_list';
-                }
-            };
-
-            const selectSubMinorCategory = (subsub) => {
-                filterCategory.value = subsub.code;
-                currentCategoryName.value = subsub.name;
+                // 直接進入結果列表
+                filterCategory.value = sub.code;
+                currentCategoryName.value = sub.name;
                 viewMode.value = 'result_list';
             };
 
@@ -576,13 +564,13 @@
             onMounted(() => { fetchAllData(); });
 
             return {
-                keyword, filteredDrugs, selectedDrug, loading, error, 
-                viewMode, atcGroups, selectedMajor, selectedMinor, filterCategory, currentCategoryName,
-                onSearchInput, selectMajorCategory, selectMinorCategory, selectSubMinorCategory, resetToHome,
+                keyword, filteredDrugs, groupedDrugs, selectedDrug, loading, error, 
+                viewMode, atcGroups, selectedMajor, filterCategory, currentCategoryName,
+                onSearchInput, selectMajorCategory, selectMinorCategory, resetToHome,
                 openDetail, closeDetail, imageLoadError, searchNhiPrice
             };
         }
     }).mount('#app');
 </script>
 </body>
-</html>
+    </html>
