@@ -23,7 +23,7 @@
 
 <div id="app" v-cloak class="max-w-md mx-auto bg-white min-h-screen relative flex flex-col">
 
-    <header class="sticky top-0 bg-blue-600 p-4 shadow-md z-20 transition-all duration-300">
+    <header class="sticky top-0 bg-blue-600 p-4 shadow-md z-30 transition-all duration-300">
         <div class="flex justify-between items-center mb-2">
             <h1 class="text-white text-lg font-bold flex items-center cursor-pointer" @click="resetToHome">
                 <i class="fa-solid fa-hospital-user mr-2"></i> 藥品查詢系統
@@ -53,7 +53,7 @@
             </button>
         </div>
         
-        <div v-if="viewMode === 'result_list' && filterCategory" class="mt-2 text-white text-xs flex items-center overflow-hidden">
+        <div v-if="(viewMode === 'result_list' || viewMode === 'sub_minor_list') && filterCategory" class="mt-2 text-white text-xs flex items-center overflow-hidden">
             <span class="opacity-70">分類：</span>
             <span class="font-bold truncate ml-1 bg-blue-800 px-2 py-0.5 rounded">{{ currentCategoryName }}</span>
         </div>
@@ -120,9 +120,9 @@
                 <p>找不到符合條件的藥品</p>
             </div>
 
-            <div v-for="group in groupedDrugs" :key="group.code" class="mb-5">
+            <div v-for="group in groupedDrugs" :key="group.code" class="mb-2">
                 
-                <div v-if="filterCategory" class="sticky top-[70px] z-10 bg-gray-100/95 backdrop-blur-sm border-l-4 border-blue-500 px-3 py-2 text-sm font-bold text-gray-700 rounded-r shadow-sm flex items-center mb-2">
+                <div v-if="filterCategory" class="sticky top-[170px] z-20 bg-gray-100/95 backdrop-blur-sm border-l-4 border-blue-500 px-3 py-2 text-sm font-bold text-gray-700 shadow-sm flex items-center mb-3 transition-all">
                     <span class="bg-gray-600 text-white text-[10px] px-1.5 py-0.5 rounded mr-2 font-mono">{{ group.code }}</span>
                     <span>{{ group.name }}</span>
                 </div>
@@ -263,7 +263,7 @@
     const CLOUDINARY_CLOUD_NAME = 'de02nbokt'; 
     // ==========================================
 
-    // *** 完整 ATC 中文對照表 (整合了 1碼, 3碼, 5碼) ***
+    // *** 擴充版 ATC 字典 (中文 + 英文 fallback) ***
     const ATC_DICT = {
         'A': '消化道及代謝', 'A01': '口腔科製劑', 'A02': '胃酸相關疾病用藥', 'A03': '功能性腸胃道疾病用藥', 'A04': '止吐藥及止噁心藥',
         'A04AA': '止吐藥：血清素(5HT3)拮抗劑', 'A04AD': '止吐藥：P物質/NK1受體拮抗劑',
@@ -365,6 +365,7 @@
             
             const atcGroups = ref([]); 
             const selectedMajor = ref(null); 
+            const selectedMinor = ref(null); 
 
             const fetchCsv = (url) => new Promise((resolve, reject) => {
                 Papa.parse(url, { download: true, header: true, skipEmptyLines: true, complete: (r) => resolve(r.data), error: (e) => reject(e) });
@@ -403,7 +404,7 @@
                     let isDiscontinued = (status1 === 'Y' || status2 === 'Y') && !(status1 === 'N' || status2 === 'N');
                     let isOutOfStock = (status1 === 'C' || status2 === 'C') && !isDiscontinued && !(status1 === 'N' || status2 === 'N');
 
-                    // ATC Parsing: 第1層=1碼, 第2層=3碼, 第3層=5碼
+                    // ATC Parsing
                     let atcMain = '', atcSub = '', atcSubSub = '';
                     if (atc.length >= 1) {
                         const c1 = atc.substring(0, 1);
@@ -441,14 +442,14 @@
 
                 data.forEach(d => {
                     if (d.atcMainCode && d.atcMain) {
-                        // Level 1
                         if (!groups[d.atcMainCode]) {
                             groups[d.atcMainCode] = { code: d.atcMainCode, name: d.atcMain, subs: {} };
                         }
-                        // Level 2
                         if (d.atcSubCode && d.atcSub) {
                             if (!groups[d.atcMainCode].subs[d.atcSubCode]) {
-                                groups[d.atcMainCode].subs[d.atcSubCode] = { code: d.atcSubCode, name: d.atcSub, count: 0 };
+                                groups[d.atcMainCode].subs[d.atcSubCode] = { 
+                                    code: d.atcSubCode, name: d.atcSub, count: 0
+                                };
                             }
                             groups[d.atcMainCode].subs[d.atcSubCode].count++;
                         }
@@ -472,7 +473,7 @@
                     );
                 } 
                 else if (filterCategory.value) {
-                    // 比對前綴 (支援 3碼 或 5碼)
+                    // 比對前綴 (支援 3碼)
                     result = drugs.value.filter(d => d.atcCode.startsWith(filterCategory.value));
                 }
                 else {
@@ -503,12 +504,9 @@
                 list.forEach(drug => {
                     // 優先使用 5碼，若無則用 3碼 或 'Other'
                     let groupCode = drug.atcSubSubCode || drug.atcSubCode || 'Other';
-                    let groupName = drug.atcSubSub || drug.atcSub || '其他';
-
-                    // 嘗試從字典找中文名 (再次確保)
-                    if (ATC_DICT[groupCode]) {
-                        groupName = ATC_DICT[groupCode];
-                    }
+                    
+                    // 名稱邏輯：1. 中文名(來自字典) 2. 英文名(來自字典) 3. 代碼
+                    let groupName = ATC_DICT[groupCode] || groupCode;
 
                     if (!groups[groupCode]) {
                         groups[groupCode] = {
@@ -539,7 +537,7 @@
             };
 
             const selectMinorCategory = (sub) => {
-                // 直接進入結果列表
+                // 直接進入結果列表 (不顯示第三層)
                 filterCategory.value = sub.code;
                 currentCategoryName.value = sub.name;
                 viewMode.value = 'result_list';
@@ -573,4 +571,4 @@
     }).mount('#app');
 </script>
 </body>
-    </html>
+</html>
