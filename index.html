@@ -53,7 +53,7 @@
             </button>
         </div>
         
-        <div v-if="(viewMode === 'result_list' || viewMode === 'sub_minor_list') && filterCategory" class="mt-2 text-white text-xs flex items-center overflow-hidden">
+        <div v-if="viewMode === 'result_list' && filterCategory" class="mt-2 text-white text-xs flex items-center overflow-hidden">
             <span class="opacity-70">分類：</span>
             <span class="font-bold truncate ml-1 bg-blue-800 px-2 py-0.5 rounded">{{ currentCategoryName }}</span>
         </div>
@@ -110,25 +110,6 @@
                         <span class="text-gray-800 font-medium">{{ sub.name }}</span>
                     </div>
                     <span class="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full">{{ sub.count }} 筆</span>
-                </div>
-            </div>
-        </div>
-
-        <div v-if="viewMode === 'sub_minor_list'" class="animate-slide-up">
-            <div class="flex items-center justify-between mb-3 px-1">
-                <button @click="viewMode = 'minor_list'" class="text-blue-600 text-sm font-bold flex items-center">
-                    <i class="fa-solid fa-arrow-left mr-1"></i> 返回子分類
-                </button>
-                <span class="text-xs text-gray-500 font-bold">{{ selectedMinor.name }}</span>
-            </div>
-            <div class="grid grid-cols-1 gap-2">
-                <div v-for="subsub in selectedMinor.subsubs" :key="subsub.code" 
-                     @click="selectSubMinorCategory(subsub)"
-                     class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-green-50 transition">
-                    <div class="flex items-center">
-                        <span class="text-gray-800 font-medium">{{ subsub.name }}</span>
-                    </div>
-                    <span class="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full">{{ subsub.count }} 筆</span>
                 </div>
             </div>
         </div>
@@ -219,9 +200,13 @@
                             <span class="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full font-bold">子分類</span>
                             <span class="text-sm text-indigo-800">{{ selectedDrug.atcSub }}</span>
                         </div>
-                        <div v-if="selectedDrug.atcSubSub" class="flex items-center gap-2 ml-4 border-l-2 border-green-200 pl-2 p-1">
-                            <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-bold">細分類</span>
-                            <span class="text-sm text-green-800">{{ selectedDrug.atcSubSub }}</span>
+                        <div v-if="selectedDrug.atcGroup" class="flex items-center gap-2 ml-4 border-l-2 border-green-200 pl-2 p-1">
+                            <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-bold">藥理組</span>
+                            <span class="text-sm text-green-800">{{ selectedDrug.atcGroup }}</span>
+                        </div>
+                         <div v-if="selectedDrug.atcSubSub" class="flex items-center gap-2 ml-6 border-l-2 border-gray-200 pl-2 p-1">
+                            <span class="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full font-bold">細分類</span>
+                            <span class="text-sm text-gray-700">{{ selectedDrug.atcSubSub }}</span>
                         </div>
                     </div>
                 </section>
@@ -282,59 +267,109 @@
     const CLOUDINARY_CLOUD_NAME = 'de02nbokt'; 
     // ==========================================
 
-    // *** ATC 字典 ***
+    // *** 完整 ATC 中文對照表 (整合了 1碼, 3碼, 4碼, 5碼) ***
+    [cite_start]// [cite: 85, 30, 10, 16, 17, 300, 302, 357, 402, 505, 595, 650, 769, 818, 885, 947]
     const ATC_DICT = {
-        'A': '消化道及代謝', 'A01': '口腔科製劑', 'A02': '胃酸相關疾病用藥', 'A03': '功能性腸胃道疾病用藥', 'A04': '止吐藥及止噁心藥',
-        'A04AA': '止吐藥：血清素(5HT3)拮抗劑', 'A04AD': '止吐藥：P物質/NK1受體拮抗劑',
-        'A05': '膽汁與肝臟治療劑', 'A06': '便秘用藥', 'A07': '止瀉藥、腸道抗發炎/抗感染劑', 'A08': '抗肥胖製劑', 'A09': '消化劑(含酶)',
-        'A10': '糖尿病用藥', 'A10AB': '胰島素(速效)', 'A10AC': '胰島素(中效)', 'A10AD': '胰島素(預混型)', 'A10AE': '胰島素(長效)', 'A10AF': '胰島素(吸入)',
-        'A10BA': '雙胍類(Metformin)', 'A10BB': '磺胺類(SU)', 'A10BD': '口服複方降糖藥', 'A10BF': 'α-葡萄糖苷酶抑制劑', 'A10BG': 'TZD類(胰島素增敏劑)', 
-        'A10BH': 'DPP-4抑制劑', 'A10BJ': 'GLP-1類似物', 'A10BK': 'SGLT2抑制劑',
-        'A11': '維生素', 'A12': '礦物質補充劑', 'A13': '補品', 'A14': '系統性同化劑', 'A15': '食慾興奮劑', 'A16': '其他消化代謝藥',
-        'B': '血液及造血器官', 'B01': '抗血栓藥', 'B01AA': '維生素K拮抗劑', 'B01AB': '肝素類', 'B01AC': '抗血小板藥', 'B01AD': '酵素類', 'B01AE': '直接凝血酶抑制劑', 'B01AF': '直接X因子抑制劑',
-        'B02': '抗出血藥', 'B02AA': '胺基酸類', 'B02AB': '蛋白酶抑制劑', 'B02BA': '維生素K', 'B02BD': '凝血因子',
-        'B03': '抗貧血製劑', 'B03AA': '鐵劑(二價)', 'B03AC': '鐵劑(三價)', 'B03BA': '維生素B12', 'B03BB': '葉酸及其衍生物', 'B03XA': '其他抗貧血藥(EPO)',
-        'B05': '血液替代品和灌注液', 'B06': '其他血液製劑',
-        'C': '心血管系統', 'C01': '心臟治療', 'C01AA': '強心苷類', 'C01BA': '抗心律不整藥(Ia)', 'C01BB': '抗心律不整藥(Ib)', 'C01BC': '抗心律不整藥(Ic)', 'C01BD': '抗心律不整藥(III)', 'C01DA': '有機硝酸鹽類', 'C01EB': '其他心臟製劑',
-        'C02': '抗高血壓藥', 'C02AB': '中樞作用降壓藥', 'C02CA': 'α-阻斷劑', 'C02DB': '肼類衍生物',
-        'C03': '利尿劑', 'C03AA': 'Thiazide類', 'C03BA': '磺胺類(Loop利尿劑)', 'C03CA': '保鉀利尿劑', 'C03DA': '保鉀利尿劑',
-        'C04': '周邊血管擴張劑', 'C05': '血管保護劑',
-        'C07': 'β-阻斷劑', 'C07AA': 'β-阻斷劑(非選擇性)', 'C07AB': 'β-阻斷劑(選擇性)', 'C07AG': 'α及β-阻斷劑',
-        'C08': '鈣離子通道阻斷劑', 'C08CA': 'DHP類(血管選擇性)', 'C08DA': 'Phenylalkylamine類', 'C08DB': 'Benzothiazepine類',
-        'C09': 'RAS系統作用藥', 'C09AA': 'ACEI單方', 'C09BA': 'ACEI+利尿劑', 'C09BB': 'ACEI+CCB', 'C09CA': 'ARB單方', 'C09DA': 'ARB+利尿劑', 'C09DB': 'ARB+CCB', 'C09DX': 'ARB其他複方',
-        'C10': '血脂修飾劑', 'C10AA': 'Statin類', 'C10AB': 'Fibrate類', 'C10AC': '膽汁酸結合樹脂', 'C10AD': '菸鹼酸類', 'C10AX': '其他降血脂藥', 'C10BA': 'Statin+其他',
-        'D': '皮膚科用藥', 'D01': '皮膚抗黴菌劑', 'D02': '潤膚劑', 'D03': '傷口潰瘍製劑', 'D04': '止癢劑', 'D05': '抗乾癬藥', 'D06': '皮膚抗生素',
-        'D07': '皮膚類固醇', 'D07AA': '弱效(I級)', 'D07AB': '中效(II級)', 'D07AC': '強效(III級)', 'D07AD': '超強效(IV級)',
-        'D08': '消毒劑', 'D10': '抗痤瘡製劑', 'D11': '其他皮膚科製劑',
-        'G': '泌尿生殖系統', 'G01': '婦科抗感染藥', 'G02': '其他婦科藥', 'G03': '性激素', 'G03AA': '口服避孕藥', 'G03BA': '雄性激素', 'G03CA': '天然雌激素', 'G03DA': '孕激素', 
-        'G04': '泌尿科藥物', 'G04BD': '解痙藥', 'G04BE': '勃起功能障礙藥', 'G04CA': '良性攝護腺肥大(α-阻斷)', 'G04CB': '良性攝護腺肥大(5α-還原酶抑制)',
-        'H': '全身性賀爾蒙', 'H01': '腦下垂體激素', 'H02': '皮質類固醇', 'H02AB': '糖皮質類固醇', 'H03': '甲狀腺治療', 'H03AA': '甲狀腺激素', 'H03BB': '抗甲狀腺藥',
-        'J': '全身性抗感染劑', 'J01': '全身性抗菌劑', 'J01AA': '四環黴素類', 'J01CA': '廣譜青黴素', 'J01CE': '青黴素(對β-lactamase敏感)', 'J01CF': '青黴素(耐β-lactamase)', 'J01CR': '青黴素複方', 
-        'J01DB': '頭孢菌素(第一代)', 'J01DC': '頭孢菌素(第二代)', 'J01DD': '頭孢菌素(第三代)', 'J01DE': '頭孢菌素(第四代)', 'J01DF': 'Monobactams', 'J01DH': 'Carbapenems', 
-        'J01EE': '磺胺類複方', 'J01FA': '巨環類', 'J01FF': '林可黴素類', 'J01GB': 'Aminoglycosides', 'J01MA': 'Fluoroquinolones', 'J01XA': '醣肽類', 'J01XD': 'Imidazoles',
-        'J02': '全身性抗黴菌劑', 'J02AC': 'Triazole類', 'J04': '抗結核病藥', 
-        'J05': '抗病毒藥', 'J05AB': '核苷類(不含HIV)', 'J05AE': '蛋白酶抑制劑', 'J05AF': '核苷類反轉錄酶抑制劑', 'J05AG': '非核苷類反轉錄酶抑制劑', 'J05AJ': 'Integrase抑制劑', 'J05AR': '抗HIV複方',
-        'J06': '免疫血清', 'J07': '疫苗',
-        'L': '抗腫瘤及免疫調節', 'L01': '抗腫瘤藥', 'L01AA': '氮芥類', 'L01BA': '葉酸類似物', 'L01BB': '嘌呤類似物', 'L01BC': '嘧啶類似物', 'L01CA': '長春花生物鹼', 'L01CD': '紫杉醇類', 'L01DB': 'Anthracyclines', 'L01XC': '單株抗體', 'L01XE': '蛋白激酶抑制劑', 'L01XX': '其他抗腫瘤藥',
-        'L02': '內分泌療法', 'L02AE': 'GnRH類似物', 'L02BA': '抗雌激素', 'L02BB': '抗雄性素', 'L03': '免疫刺激劑', 'L03AA': '群落刺激因子', 'L03AB': '干擾素',
-        'L04': '免疫抑制劑', 'L04AA': '選擇性免疫抑制劑', 'L04AB': 'TNF-α抑制劑', 'L04AC': 'Interleukin抑制劑', 'L04AD': 'Calcineurin抑制劑', 'L04AX': '其他免疫抑制劑',
-        'M': '肌肉骨骼系統', 'M01': '抗發炎抗風濕藥', 'M01AA': 'Butylpyrazolidines', 'M01AB': '醋酸衍生物', 'M01AC': 'Oxicams', 'M01AE': '丙酸衍生物', 'M01AH': 'Coxibs', 'M01AX': '其他NSAID',
-        'M02': '外用關節肌肉痛藥', 'M03': '肌肉鬆弛劑', 'M03AB': 'Choline衍生物', 'M03AC': '其他季銨化合物', 'M03AX': '其他周邊作用', 'M03BX': '中樞作用肌肉鬆弛劑',
-        'M04': '抗痛風藥', 'M04AA': '抑制尿酸生成', 'M04AB': '促進尿酸排泄', 'M05': '骨骼疾病藥物', 'M05BA': '雙磷酸鹽類', 'M05BX': '其他骨骼藥物',
-        'N': '神經系統', 'N01': '麻醉劑', 'N01AB': '鹵化烴類', 'N01AF': 'Barbiturates', 'N01AH': 'Opioid麻醉劑', 'N01AX': '其他全麻藥', 'N01BB': '醯胺類局麻藥',
-        'N02': '止痛藥', 'N02AA': '天然鴉片生物鹼', 'N02AB': 'Phenylpiperidine', 'N02AX': '其他鴉片類', 'N02BA': '水楊酸類', 'N02BE': 'Anilides',
-        'N03': '抗癲癇藥', 'N03AA': 'Barbiturates', 'N03AB': 'Hydantoin', 'N03AF': 'Carboxamide', 'N03AG': '脂肪酸衍生物', 'N03AX': '其他抗癲癇藥',
-        'N04': '抗帕金森氏症', 'N04AA': '三級胺', 'N04BA': 'Dopa及其衍生物', 'N04BC': '多巴胺激動劑', 'N04BD': 'MAO-B抑制劑',
-        'N05': '精神安定劑', 'N05AA': 'Phenothiazine', 'N05AB': 'Piperazine', 'N05AD': 'Butyrophenone', 'N05AH': 'Diazepines/Oxepines', 'N05AL': 'Benzamides', 'N05AX': '其他抗精神病藥', 'N05BA': 'Benzodiazepine(抗焦慮)', 'N05CD': 'Benzodiazepine(安眠)', 'N05CF': 'BZD相關藥物',
-        'N06': '精神興奮劑', 'N06AA': 'TCA(三環抗鬱)', 'N06AB': 'SSRI', 'N06AX': '其他抗憂鬱藥', 'N06BA': '中樞擬交感神經', 'N06DA': '膽鹼酯酶抑制劑', 'N06DX': '其他失智症藥',
-        'N07': '其他神經藥物', 'N07AA': '抗膽鹼酯酶', 'N07BB': '酒精依賴用藥',
-        'P': '抗寄生蟲產品', 'P01': '抗原蟲藥', 'P02': '驅蟲藥', 'P03': '殺外寄生蟲藥',
-        'R': '呼吸系統', 'R01': '鼻腔製劑', 'R02': '咽喉製劑', 'R03': '阻塞性呼吸道用藥', 'R03AC': '選擇性β2激動劑', 'R03AK': '複方', 'R03BA': 'Glucocorticoids(吸入)', 'R03BB': '抗膽鹼藥', 'R03DA': 'Xanthines', 'R03DC': 'Leukotriene受體拮抗劑',
-        'R05': '咳嗽感冒製劑', 'R05CB': '黏液溶解劑', 'R05DA': '鴉片生物鹼(止咳)',
-        'R06': '抗組織胺', 'R06AA': 'Aminoalkyl ethers', 'R06AB': 'Substituted alkylamines', 'R06AE': 'Piperazine衍生物', 'R06AX': '其他抗組織胺',
-        'S': '感覺器官', 'S01': '眼科', 'S01AA': '抗生素', 'S01BA': '皮質類固醇', 'S01CA': '類固醇+抗生素', 'S01EA': '擬交感神經藥', 'S01EB': '副交感神經藥', 'S01EC': '碳酸酐酶抑制劑', 'S01ED': 'β-阻斷劑', 'S01EE': '前列腺素類似物', 'S01FA': '抗膽鹼藥', 'S01GX': '抗過敏藥', 'S01LA': '抗新生血管製劑',
-        'S02': '耳科', 'S03': '眼耳製劑',
-        'V': '其他', 'V01': '過敏原', 'V03': '解毒劑', 'V03AB': '解毒劑', 'V03AE': '高血鉀治療藥', 'V03AF': '解毒劑(抗腫瘤藥)', 'V04': '診斷試劑', 'V08': '顯影劑'
+        'A': '消化道及代謝', 'A01': '口腔病用藥', 'A01A': '口腔病用藥', 'A01AA': '預防齲齒藥', 'A01AB': '局部口腔治療用抗感染藥及防腐劑', 'A01AC': '局部口腔治療用皮質類固醇', 'A01AD': '其他局部口腔治療用藥',
+        'A02': '胃酸相關疾病治療藥', 'A02A': '制酸劑', 'A02AA': '鎂化合物', 'A02AB': '鋁化合物', 'A02AC': '鈣化合物', 'A02AD': '鋁、鈣、鎂化合物之複方', 'A02AF': '制酸劑與消脹氣藥之複方', 'A02AH': '配有碳酸氫鈉的抗酸藥', 'A02AX': '其他制酸劑複方',
+        'A02B': '消化性潰瘍及胃食道逆流用藥', 'A02BA': 'H2受體拮抗劑', 'A02BB': '前列腺素', 'A02BC': '質子幫浦抑制劑', 'A02BD': '根除幽門螺旋桿菌之複方', 'A02BX': '其他消化性潰瘍用藥',
+        'A03': '功能性胃腸道疾病用藥', 'A03A': '功能性胃腸道疾病用藥', 'A03AA': '合成抗膽鹼劑，酯類', 'A03AB': '合成抗膽鹼劑，四級銨化合物', 'A03AC': '合成解痙劑，醯胺類', 'A03AD': '罌粟鹼及其衍生物', 'A03AE': '血清素受體拮抗劑', 'A03AX': '其他功能性腸道疾病用藥',
+        'A03B': '顛茄及其衍生物', 'A03BA': '顛茄生物鹼，三級胺類', 'A03BB': '顛茄生物鹼，半合成四級銨化合物',
+        'A03F': '胃腸動力藥', 'A03FA': '胃腸動力藥',
+        'A04': '止吐藥及止噁心藥', 'A04A': '止吐藥及止噁心藥', 'A04AA': '血清素(5-HT3)拮抗劑', 'A04AD': '其他止吐藥',
+        'A05': '膽道及肝臟治療藥', 'A05A': '膽道治療藥', 'A05AA': '膽酸製劑', 'A05AB': '膽道治療用藥，利膽劑', 'A05AX': '其他膽道治療用藥', 'A05B': '肝臟治療藥', 'A05BA': '肝臟治療藥',
+        'A06': '緩瀉劑', 'A06A': '緩瀉劑', 'A06AA': '軟便劑', 'A06AB': '接觸性緩瀉劑', 'A06AC': '膨脹性緩瀉劑', 'A06AD': '滲透壓緩瀉劑', 'A06AG': '灌腸劑', 'A06AH': '周邊鴉片受體拮抗劑',
+        'A07': '止瀉劑、腸道抗發炎/抗感染劑', 'A07A': '腸道抗感染劑', 'A07AA': '抗生素', 'A07AB': '磺胺類藥物', 'A07AC': '咪唑衍生物', 'A07B': '腸道吸附劑', 'A07BA': '活性碳製劑', 'A07BB': '鉍製劑', 'A07BC': '其他腸道吸附劑',
+        'A07D': '止瀉劑', 'A07DA': '止瀉劑', 'A07E': '腸道抗發炎劑', 'A07EA': '局部作用皮質類固醇', 'A07EB': '抗過敏劑，不含皮質類固醇', 'A07EC': '氨基水楊酸及其類似物',
+        'A10': '糖尿病用藥', 'A10A': '胰島素及其類似物', 'A10AB': '速效胰島素', 'A10AC': '中效胰島素', 'A10AD': '預混胰島素', 'A10AE': '長效胰島素', 'A10AF': '吸入型胰島素',
+        'A10B': '口服降血糖藥', 'A10BA': '雙胍類', 'A10BB': '磺醯尿素類', 'A10BC': '磺醯胺類', 'A10BD': '複方降血糖藥', 'A10BF': 'α-葡萄糖苷酶抑制劑', 'A10BG': 'Thiazolidinediones', 'A10BH': 'DPP-4 抑制劑', 'A10BJ': 'GLP-1 類似物', 'A10BK': 'SGLT2 抑制劑', 'A10BX': '其他降血糖藥',
+        'A11': '維生素', 'A11A': '綜合維生素，複方', 'A11B': '綜合維生素，單方', 'A11C': '維生素A及D', 'A11CA': '維生素A，單方', 'A11CC': '維生素D及其類似物', 'A11D': '維生素B1及其複方', 'A11E': '維生素B群', 'A11G': '抗壞血酸（維生素C）', 'A11H': '其他純維生素製劑',
+        'A12': '礦物質補充劑', 'A12A': '鈣', 'A12AA': '鈣', 'A12B': '鉀', 'A12C': '其他礦物質補充劑', 'A12CB': '鋅製劑', 'A12CC': '鎂製劑',
+        'A16': '其他消化道及代謝用藥', 'A16A': '其他消化道及代謝用藥', 'A16AA': '胺基酸及其衍生物', 'A16AB': '酶類',
+
+        'B': '血液及造血器官', 'B01': '抗血栓藥', 'B01A': '抗血栓藥', 'B01AA': '維生素 K 拮抗劑', 'B01AB': '肝素類', 'B01AC': '血小板凝集抑制劑', 'B01AD': '酵素類', 'B01AE': '直接凝血酶抑制劑', 'B01AF': '直接 X 因子抑制劑',
+        'B02': '止血藥', 'B02A': '抗纖維蛋白溶解藥', 'B02AA': '胺基酸類', 'B02B': '維生素K及其他止血藥', 'B02BA': '維生素K', 'B02BD': '血液凝固因子',
+        'B03': '抗貧血藥', 'B03A': '鐵劑', 'B03AA': '二價鐵，口服製劑', 'B03AC': '三價鐵，非注射用製劑', 'B03B': '維生素B12及葉酸', 'B03BA': '維生素B12', 'B03BB': '葉酸及其衍生物', 'B03X': '其他抗貧血藥', 'B03XA': '其他抗貧血藥',
+        'B05': '血液替代品及灌注液', 'B05A': '血液及相關製品', 'B05AA': '血液替代品及血漿蛋白組分', 'B05B': '靜脈輸注液', 'B05BA': '腸道外營養溶液', 'B05BB': '電解質平衡調節溶液', 'B05C': '灌注液', 'B05D': '腹膜透析液',
+        'B06': '其他血液學藥劑', 'B06A': '其他血液學藥劑', 'B06AB': '血基質製品', 'B06AC': '遺傳性血管水腫治療藥',
+
+        'C': '心血管系統', 'C01': '心臟治療用藥', 'C01A': '強心苷類', 'C01AA': '洋地黃苷類', 'C01AB': '海蔥苷類', 'C01AC': '毒毛旋花苷類', 'C01AX': '其他強心苷類',
+        'C01B': '抗心律不整藥', 'C01BA': '抗心律不整藥，Ia 類', 'C01BB': '抗心律不整藥，Ib 類', 'C01BC': '抗心律不整藥，Ic 類', 'C01BD': '抗心律不整藥，III 類',
+        'C01C': '強心劑', 'C01CA': '腎上腺素性興奮劑', 'C01CX': '其他強心劑', 'C01D': '心肌疾病治療用血管擴張劑', 'C01DA': '有機硝酸鹽類',
+        'C02': '抗高血壓藥', 'C02A': '抗腎上腺素性藥物，中樞作用', 'C02AA': '蛇根木生物鹼', 'C02AB': 'Methyldopa 類', 'C02AC': 'Imidazoline 受體致效劑', 'C02C': '抗腎上腺素性藥物，周邊作用', 'C02CA': 'Alpha-腎上腺素受體拮抗劑', 'C02D': '動靜脈平滑肌作用藥', 'C02DB': 'Hydrazinophthalazine 衍生物', 'C02K': '其他抗高血壓藥',
+        'C03': '利尿劑', 'C03A': '低效能利尿劑，Thiazides 類', 'C03AA': 'Thiazides, 單方', 'C03B': '低效能利尿劑，不含 Thiazides', 'C03BA': '磺胺類', 'C03BX': '其他低限量利尿藥',
+        'C03C': '高效能利尿劑', 'C03CA': '磺胺類', 'C03D': '保鉀利尿劑', 'C03DA': '醛固酮拮抗劑', 'C03E': '利尿劑與保鉀劑之複方',
+        'C04': '周邊血管擴張劑', 'C04A': '周邊血管擴張劑', 'C04AA': '2-amino-1-phenylethanol 衍生物', 'C04AB': 'Imidazoline 衍生物', 'C04AC': '菸鹼酸及其衍生物', 'C04AD': '嘌呤衍生物', 'C04AE': '麥角生物鹼', 'C04AF': '酵素類', 'C04AX': '其他周邊血管擴張劑',
+        'C05': '血管保護劑', 'C05A': '治療痔瘡及肛裂用局部製劑', 'C05AA': '含皮質類固醇之製品', 'C05B': '抗靜脈曲張療法', 'C05BA': '肝素類或類肝素，局部用', 'C05C': '微血管穩定劑', 'C05CA': '生物類黃酮',
+        'C07': 'Beta-阻斷劑', 'C07A': 'Beta-阻斷劑', 'C07AA': 'Beta-阻斷劑，非選擇性', 'C07AB': 'Beta-阻斷劑，選擇性', 'C07AG': 'Alpha 及 Beta-阻斷劑', 'C07B': 'Beta-阻斷劑與 Thiazides 類利尿劑之複方', 'C07C': 'Beta-阻斷劑與其他利尿劑之複方', 'C07E': 'Beta-阻斷劑與血管擴張劑之複方', 'C07EA': '非選擇性 Beta 受體阻斷藥和血管擴張藥', 'C07F': 'Beta-阻斷劑與其他抗高血壓藥之複方',
+        'C08': '鈣離子通道阻斷劑', 'C08C': '選擇性鈣離子通道阻斷劑，主要作用於血管', 'C08CA': 'Dihydropyridine 衍生物', 'C08CX': '其他主要作用於血管之選擇性鈣離子通道阻斷劑', 'C08D': '選擇性鈣離子通道阻斷劑，直接作用於心臟', 'C08DA': 'Phenylalkylamine 衍生物', 'C08DB': 'Benzothiazepine 衍生物', 'C08E': '非選擇性鈣離子通道阻斷劑', 'C08EA': 'Phenylalkylamine 衍生物', 'C08EX': '其他非選擇性鈣離子通道阻斷劑', 'C08G': '鈣離子通道阻斷劑與利尿劑之複方', 'C08GA': '鈣離子通道阻斷劑與利尿劑',
+        'C09': '作用於腎素-血管張力素系統之藥物', 'C09A': 'ACE 抑制劑，單方', 'C09AA': 'ACE 抑制劑，單方', 'C09B': 'ACE 抑制劑，複方', 'C09BA': 'ACE 抑制劑與利尿劑之複方', 'C09BB': 'ACE 抑制劑與鈣離子通道阻斷劑之複方', 'C09C': '血管張力素II受體拮抗劑，單方', 'C09CA': '血管張力素II受體拮抗劑，單方', 'C09D': '血管張力素II受體拮抗劑，複方', 'C09DA': '血管張力素II受體拮抗劑與利尿劑之複方', 'C09DB': '血管張力素II受體拮抗劑與鈣離子通道阻斷劑之複方',
+        'C10': '脂質調節劑', 'C10A': '脂質調節劑，單方', 'C10AA': 'HMG CoA 還原酶抑制劑', 'C10AB': 'Fibrates 類', 'C10AC': '膽酸結合劑', 'C10AD': '菸鹼酸及其衍生物', 'C10AX': '其他脂質調節劑', 'C10B': '脂質調節劑，複方', 'C10BA': 'HMG CoA 還原酶抑制劑與其他脂質調節劑之複方',
+
+        'D': '皮膚科用藥', 'D01': '皮膚病用抗黴菌藥', 'D01A': '局部用抗黴菌藥', 'D01AC': 'Imidazole 及 Triazole 衍生物', 'D01AE': '其他局部用抗黴菌藥', 'D01B': '全身用抗黴菌藥', 'D01BA': '全身用抗黴菌藥',
+        'D02': '潤膚劑及保護劑', 'D02A': '潤膚劑及保護劑', 'D02AA': '矽酮類製品', 'D02AE': '尿素製品',
+        'D03': '創傷及潰瘍治療劑', 'D03A': '疤痕治療劑', 'D03AX': '其他疤痕治療劑',
+        'D04': '止癢藥', 'D04A': '止癢藥', 'D04AA': '抗組織胺，局部用', 'D04AB': '麻醉劑，局部用',
+        'D05': '抗乾癬藥', 'D05A': '局部用抗乾癬藥', 'D05AA': '煤焦油', 'D05AX': '其他局部用抗乾癬藥',
+        'D06': '皮膚病用抗生素及化學治療藥', 'D06A': '局部用抗生素', 'D06AA': '四環黴素及其衍生物', 'D06B': '局部用化學治療藥', 'D06BA': '磺胺類', 'D06BB': '抗病毒藥',
+        'D07': '皮膚科用皮質類固醇', 'D07A': '皮質類固醇，單方', 'D07AA': '皮質類固醇，弱效', 'D07AB': '皮質類固醇，中效', 'D07AC': '皮質類固醇，強效', 'D07AD': '皮質類固醇，超強效', 'D07B': '皮質類固醇，與防腐劑之複方', 'D07BA': '弱效皮質類固醇與防腐劑', 'D07BD': '強效皮質類固醇與防腐劑', 'D07C': '皮質類固醇，與抗生素之複方', 'D07CD': '超強效皮質類固醇與抗生素', 'D07X': '皮質類固醇，其他複方', 'D07XD': '皮質類固醇，超強效，其他複方',
+        'D10': '抗痤瘡製劑', 'D10A': '局部用抗痤瘡製劑', 'D10AD': '維生素A酸及其類似物', 'D10B': '全身用抗痤瘡製劑', 'D10BA': '維生素A酸',
+
+        'G': '泌尿生殖系統及性激素', 'G01': '婦科抗感染藥及防腐劑', 'G01A': '婦科抗感染藥及防腐劑，不含皮質類固醇', 'G01AA': '抗生素', 'G01AB': '砷化合物', 'G01AC': '喹啉衍生物', 'G01AD': '有機酸', 'G01AE': '磺胺類', 'G01AF': 'Imidazole 衍生物', 'G01AG': '三唑類衍生物', 'G01AX': '其他抗感染藥及防腐劑', 'G01B': '婦科抗感染藥及防腐劑，與皮質類固醇之複方',
+        'G02': '其他婦科用藥', 'G02A': '子宮收縮劑', 'G02AB': '麥角生物鹼', 'G02AC': '麥角生物鹼與催產素', 'G02AD': '前列腺素', 'G02B': '陰道用避孕藥', 'G02C': '其他婦科用藥', 'G02CA': '擬交感神經劑，抑制分娩用', 'G02CB': '泌乳素抑制劑',
+        'G03': '性激素及生殖系統調節劑', 'G03A': '全身用荷爾蒙避孕藥', 'G03AA': '黃體素與雌激素，固定劑量複方', 'G03AB': '黃體素與雌激素，序列製劑', 'G03AC': '黃體素', 'G03AD': '緊急避孕藥', 'G03B': '雄性激素', 'G03BA': '3-oxoandrosten (4) 衍生物', 'G03C': '雌激素', 'G03CA': '天然及半合成雌激素，單方', 'G03D': '黃體素', 'G03DA': 'Pregnen (4) 衍生物', 'G03E': '雄性激素與女性性激素之複方', 'G03EA': '雄性激素與雌激素', 'G03EB': '雄性激素、黃體素與雌激素之複方', 'G03EK': '雄性激素與女性性激素及其他藥物之複方', 'G03G': '促性腺激素及其他排卵刺激劑', 'G03GA': '促性腺激素', 'G03GB': '排卵刺激劑，合成', 'G03X': '其他性激素及生殖系統調節劑', 'G03XA': '抗促性腺激素及類似藥物', 'G03XC': '選擇性雌激素受體調節劑',
+        'G04': '泌尿科用藥', 'G04B': '泌尿科用藥', 'G04BA': '酸化劑', 'G04BC': '尿路結石溶解劑', 'G04BD': '頻尿及尿失禁治療藥', 'G04BE': '勃起功能障礙用藥', 'G04BX': '其他泌尿科用藥', 'G04C': '良性攝護腺肥大用藥', 'G04CA': 'Alpha-腎上腺素受體拮抗劑', 'G04CB': '睪固酮-5-alpha 還原酶抑制劑', 'G04CX': '其他良性攝護腺肥大用藥',
+
+        'H': '全身性荷爾蒙製劑，不含性激素及胰島素', 'H01': '腦下垂體及下視丘荷爾蒙與其類似物', 'H01A': '腦下垂體前葉荷爾蒙及類似物', 'H01AA': '促腎上腺皮質素', 'H01AB': '促甲狀腺素', 'H01AC': '生長激素及其致效劑', 'H01AX': '其他腦下垂體前葉荷爾蒙及類似物', 'H01B': '腦下垂體後葉荷爾蒙', 'H01BA': '抗利尿激素及其類似物', 'H01BB': '催產素及其衍生物', 'H01C': '下視丘荷爾蒙', 'H01CA': '促性腺激素釋放激素', 'H01CB': '生長抑素及其類似物', 'H01CC': '抗促性腺激素釋放激素',
+        'H02': '全身用皮質類固醇', 'H02A': '全身用皮質類固醇，單方', 'H02AA': '礦物皮質酮類', 'H02AB': '糖皮質酮類', 'H02B': '全身用皮質類固醇，複方', 'H02BX': '全身用皮質類固醇，複方', 'H02C': '抗腎上腺藥', 'H02CA': '抗腎上腺皮質藥',
+        'H03': '甲狀腺治療藥', 'H03A': '甲狀腺製劑', 'H03AA': '甲狀腺荷爾蒙', 'H03B': '抗甲狀腺製劑', 'H03BA': 'Thiouracils 類', 'H03BB': '含硫之 Imidazole 衍生物', 'H03BC': '過氯酸鹽', 'H03C': '碘治療', 'H03CA': '碘治療',
+        'H04': '胰臟荷爾蒙', 'H04A': '肝醣分解荷爾蒙', 'H04AA': '肝醣分解荷爾蒙',
+        'H05': '鈣質恆定', 'H05A': '副甲狀腺荷爾蒙及其類似物', 'H05AA': '副甲狀腺荷爾蒙及其類似物', 'H05B': '抗副甲狀腺製劑', 'H05BA': '降鈣素製劑', 'H05BX': '其他抗副甲狀腺製劑',
+
+        'J': '全身用抗感染劑', 'J01': '全身用抗菌劑', 'J01A': '四環黴素類', 'J01AA': '四環黴素類', 'J01B': '氯黴素類', 'J01BA': '氯黴素類', 'J01C': 'Beta-lactam 抗生素，青黴素類', 'J01CA': '廣效青黴素', 'J01CE': '對 Beta-lactamase 敏感之青黴素', 'J01CF': '抗 Beta-lactamase 之青黴素', 'J01CR': '青黴素複方，含 Beta-lactamase 抑制劑', 'J01D': '其他 Beta-lactam 抗生素', 'J01DB': '第一代頭孢菌素', 'J01DC': '第二代頭孢菌素', 'J01DD': '第三代頭孢菌素', 'J01DE': '第四代頭孢菌素', 'J01DH': 'Carbapenems 類',
+        'J01E': '磺胺類及 Trimethoprim', 'J01EA': 'Trimethoprim 及其衍生物', 'J01EB': '短效磺胺類', 'J01EC': '中效磺胺類', 'J01ED': '長效磺胺類', 'J01EE': '磺胺類與 Trimethoprim 之複方', 'J01F': 'Macrolides, Lincosamides 及 Streptogramins', 'J01FA': 'Macrolides 類', 'J01FF': 'Lincosamides 類', 'J01G': 'Aminoglycoside 抗生素', 'J01GA': 'Streptomycins 類', 'J01GB': '其他 Aminoglycosides', 'J01M': 'Quinolone 抗生素', 'J01MA': 'Fluoroquinolones 類', 'J01X': '其他抗菌劑', 'J01XA': '醣肽類抗生素', 'J01XD': 'Imidazole 衍生物',
+        'J02': '全身用抗黴菌劑', 'J02A': '全身用抗黴菌劑', 'J02AA': '抗生素類', 'J02AB': 'Imidazole 衍生物', 'J02AC': 'Triazole 衍生物', 'J02AX': '其他全身用抗黴菌劑',
+        'J04': '抗分枝桿菌藥', 'J04A': '結核病治療藥', 'J04AA': '胺基水楊酸及其衍生物', 'J04AB': '抗生素類', 'J04AC': 'Hydrazides 類', 'J04AK': '結核病治療藥之複方', 'J04AM': '其他結核病治療藥', 'J04B': '痲瘋病治療藥', 'J04BA': '痲瘋病治療藥',
+        'J05': '全身用抗病毒藥', 'J05A': '直接作用抗病毒藥', 'J05AB': 'Nucleosides 及 Nucleotides', 'J05AC': 'Cyclic amines 類', 'J05AD': 'Phosphonic acid 衍生物', 'J05AE': '蛋白酶抑制劑', 'J05AF': '核苷酸類反轉錄酶抑制劑', 'J05AG': '非核苷酸類反轉錄酶抑制劑', 'J05AH': '神經胺酸酶抑制劑', 'J05AJ': 'Integrase 抑制劑', 'J05AP': '抗 HCV 病毒藥', 'J05AR': '治療 HIV 感染之抗病毒藥複方', 'J05AX': '其他抗病毒藥',
+        'J06': '免疫血清及免疫球蛋白', 'J06A': '免疫血清', 'J06AA': '免疫血清', 'J06B': '免疫球蛋白', 'J06BA': '人類正常免疫球蛋白', 'J06BB': '特異性免疫球蛋白',
+        'J07': '疫苗', 'J07A': '細菌性疫苗', 'J07AC': '炭疽病疫苗', 'J07AD': '布魯氏菌疫苗', 'J07AG': '流感嗜血桿菌 B 型疫苗', 'J07AH': '腦膜炎球菌疫苗', 'J07AJ': '百日咳疫苗', 'J07AK': '鼠疫疫苗', 'J07AL': '肺炎球菌疫苗', 'J07AM': '破傷風疫苗', 'J07AN': '結核病疫苗', 'J07AP': '傷寒疫苗', 'J07AR': '斑疹傷寒疫苗', 'J07AX': '其他細菌性疫苗', 'J07B': '病毒性疫苗', 'J07BA': '腦炎疫苗', 'J07BB': '流感疫苗', 'J07BC': '肝炎疫苗', 'J07BD': '麻疹疫苗', 'J07BE': '腮腺炎疫苗', 'J07BF': '脊髓灰質炎疫苗', 'J07BG': '狂犬病疫苗', 'J07BH': '輪狀病毒腹瀉疫苗', 'J07BJ': '風疹疫苗', 'J07BK': '水痘帶狀皰疹疫苗', 'J07BL': '黃熱病疫苗', 'J07BM': '乳突病毒疫苗', 'J07BN': 'Covid-19 疫苗', 'J07BX': '其他病毒性疫苗', 'J07C': '細菌性及病毒性疫苗之複方', 'J07CA': '細菌性及病毒性疫苗之複方',
+
+        'L': '抗腫瘤藥及免疫調節劑', 'L01': '抗腫瘤藥', 'L01A': '烷化劑', 'L01AA': '氮芥類', 'L01AB': '烷基磺酸鹽類', 'L01AC': '乙烯亞胺類', 'L01AD': '亞硝基脲類', 'L01AE': '環氧化物類', 'L01AX': '其他烷化劑', 'L01B': '抗代謝劑', 'L01BA': '葉酸類似物', 'L01BB': '嘌呤類似物', 'L01BC': '嘧啶類似物', 'L01C': '植物生物鹼及其他天然產物', 'L01CA': '長春花生物鹼', 'L01CB': '鬼臼毒素衍生物', 'L01CC': '秋水仙鹼衍生物', 'L01CD': '紫杉醇類', 'L01CE': 'Topoisomerase 1 (TOP1) 抑制劑', 'L01CX': '其他植物生物鹼及天然產物', 'L01D': '細胞毒性抗生素及相關物質', 'L01DA': '放線菌素類', 'L01DB': '蒽環類', 'L01DC': '其他細胞毒性抗生素', 'L01E': '蛋白激酶抑制劑', 'L01EA': 'BCR-ABL tyrosine kinase 抑制劑', 'L01EB': 'EGFR tyrosine kinase 抑制劑', 'L01EC': 'B-Raf serine-threonine kinase (BRAF) 抑制劑', 'L01ED': 'ALK 抑制劑', 'L01EE': 'MEK 抑制劑', 'L01EF': 'CDK 抑制劑', 'L01EG': 'mTOR 抑制劑', 'L01EH': 'HER2 tyrosine kinase 抑制劑', 'L01EJ': 'JAK 抑制劑', 'L01EK': 'VEGFR tyrosine kinase 抑制劑', 'L01EL': 'BTK 抑制劑', 'L01EM': 'Pi3K 抑制劑', 'L01EX': '其他蛋白激酶抑制劑', 'L01F': '單株抗體及抗體藥物複合體', 'L01FA': 'CD20 抑制劑', 'L01FB': 'CD22 抑制劑', 'L01FC': 'CD38 抑制劑', 'L01FD': 'HER2 抑制劑', 'L01FE': 'EGFR 抑制劑', 'L01FF': 'PD-1/PD-L1 抑制劑', 'L01FG': 'VEGF/VEGFR 抑制劑', 'L01FX': '其他單株抗體及抗體藥物複合體', 'L01X': '其他抗腫瘤藥', 'L01XA': '鉑化合物', 'L01XB': '甲基聯氨', 'L01XC': '單株抗體', 'L01XD': '光動力治療用增敏劑', 'L01XE': '蛋白激酶抑制劑', 'L01XF': 'Retinoids 類', 'L01XG': 'Proteasome 抑制劑', 'L01XH': 'HDAC 抑制劑', 'L01XJ': 'Hedgehog pathway 抑制劑', 'L01XK': 'PARP 抑制劑', 'L01XL': 'Antineoplastic cell and gene therapy', 'L01XX': '其他抗腫瘤藥',
+        'L02': '內分泌治療', 'L02A': '荷爾蒙及其相關藥物', 'L02AA': '雌激素', 'L02AB': '黃體素', 'L02AE': '促性腺激素釋放激素類似物', 'L02AX': '其他荷爾蒙', 'L02B': '荷爾蒙拮抗劑及相關藥物', 'L02BA': '抗雌激素', 'L02BB': '抗雄性激素', 'L02BG': '芳香環轉化酶抑制劑', 'L02BX': '其他荷爾蒙拮抗劑',
+        'L03': '免疫刺激劑', 'L03A': '免疫刺激劑', 'L03AA': '群落刺激因子', 'L03AB': '干擾素', 'L03AC': 'Interleukins', 'L03AX': '其他免疫刺激劑',
+        'L04': '免疫抑制劑', 'L04A': '免疫抑制劑', 'L04AA': '選擇性免疫抑制劑', 'L04AB': 'TNF-alpha 抑制劑', 'L04AC': 'Interleukin 抑制劑', 'L04AD': 'Calcineurin 抑制劑', 'L04AX': '其他免疫抑制劑',
+
+        'M': '肌肉骨骼系統', 'M01': '抗發炎及抗風濕藥', 'M01A': '非類固醇抗發炎藥', 'M01AA': 'Butylpyrazolidines', 'M01AB': '醋酸衍生物', 'M01AC': 'Oxicams 類', 'M01AE': '丙酸衍生物', 'M01AG': 'Fenamates', 'M01AH': 'Coxibs 類', 'M01AX': '其他非類固醇抗發炎藥', 'M01B': '抗發炎/抗風濕藥之複方', 'M01BA': '抗發炎/抗風濕藥與皮質類固醇之複方', 'M01BX': '其他抗發炎/抗風濕藥之複方', 'M01C': '特異性抗風濕藥', 'M01CA': 'Quinolines', 'M01CB': '金製劑', 'M01CC': 'Penicillamine 及其類似物', 'M01CX': '其他特異性抗風濕藥',
+        'M02': '關節及肌肉痛之局部用藥', 'M02A': '關節及肌肉痛之局部用藥', 'M02AA': '非類固醇抗發炎藥，局部用', 'M02AB': 'Capsaicin 及其衍生物', 'M02AC': '含水楊酸衍生物之製品',
+        'M03': '肌肉鬆弛劑', 'M03A': '周邊作用肌肉鬆弛劑', 'M03AA': '箭毒生物鹼', 'M03AB': '膽鹼衍生物', 'M03AC': '其他四級銨化合物', 'M03AX': '其他周邊作用肌肉鬆弛劑', 'M03B': '中樞作用肌肉鬆弛劑', 'M03BA': 'Carbamic acid esters', 'M03BB': 'Oxazol, thiazine, triazine 衍生物', 'M03BC': '醚類，化學結構近似抗組織胺', 'M03BX': '其他中樞作用肌肉鬆弛劑',
+        'M04': '抗痛風藥', 'M04A': '抗痛風藥', 'M04AA': '抑制尿酸生成藥', 'M04AB': '增加尿酸排泄藥', 'M04AC': '無顯著影響尿酸代謝之藥物', 'M04AX': '其他抗痛風藥',
+        'M05': '骨骼疾病治療藥', 'M05B': '影響骨骼結構與礦物質化之藥物', 'M05BA': '雙磷酸鹽類', 'M05BB': '雙磷酸鹽與鈣之複方', 'M05BC': '骨成形蛋白', 'M05BX': '其他影響骨骼結構與礦物質化之藥物',
+        'M09': '其他肌肉骨骼系統疾病用藥', 'M09A': '其他肌肉骨骼系統疾病用藥', 'M09AA': 'Quinine 及其衍生物', 'M09AB': '酶類', 'M09AX': '其他肌肉骨骼系統疾病用藥',
+
+        'N': '神經系統', 'N01': '麻醉劑', 'N01A': '全身麻醉劑', 'N01AA': '醚類', 'N01AB': '鹵化烴類', 'N01AF': '巴比妥類', 'N01AH': '鴉片類麻醉劑', 'N01AX': '其他全身麻醉劑', 'N01B': '局部麻醉劑', 'N01BA': '胺基苯甲酸酯類', 'N01BB': '醯胺類', 'N01BC': '苯甲酸酯類', 'N01BX': '其他局部麻醉劑',
+        'N02': '止痛藥', 'N02A': '鴉片類', 'N02AA': '天然鴉片生物鹼', 'N02AB': 'Phenylpiperidine 衍生物', 'N02AC': 'Diphenylpropylamine 衍生物', 'N02AD': 'Benzomorphan 衍生物', 'N02AE': 'Oripavine 衍生物', 'N02AF': 'Morphinan 衍生物', 'N02AG': '鴉片類與解痙劑之複方', 'N02AJ': '鴉片類與非鴉片類止痛藥之複方', 'N02AX': '其他鴉片類', 'N02B': '其他止痛藥及退燒藥', 'N02BA': '水楊酸及其衍生物', 'N02BB': 'Pyrazolones 類', 'N02BE': 'Anilides 類', 'N02BG': '其他止痛藥及退燒藥', 'N02C': '抗偏頭痛藥', 'N02CA': '麥角生物鹼', 'N02CB': '皮質類固醇衍生物', 'N02CC': '選擇性 5-HT1 受體致效劑', 'N02CD': 'CGRP 拮抗劑', 'N02CX': '其他抗偏頭痛藥',
+        'N03': '抗癲癇藥', 'N03A': '抗癲癇藥', 'N03AA': '巴比妥類及衍生物', 'N03AB': 'Hydantoin 衍生物', 'N03AC': 'Oxazolidine 衍生物', 'N03AD': 'Succinimide 衍生物', 'N03AE': 'Benzodiazepine 衍生物', 'N03AF': 'Carboxamide 衍生物', 'N03AG': '脂肪酸衍生物', 'N03AX': '其他抗癲癇藥',
+        'N04': '抗帕金森氏症藥', 'N04A': '抗膽鹼劑', 'N04AA': '三級胺類', 'N04AB': '醚類，化學結構近似抗組織胺', 'N04B': '多巴胺類藥物', 'N04BA': 'Dopa 及其衍生物', 'N04BB': 'Adamantane 衍生物', 'N04BC': '多巴胺致效劑', 'N04BD': '單胺氧化酶 B 抑制劑', 'N04BX': '其他多巴胺類藥物',
+        'N05': '精神抑制藥', 'N05A': '抗精神病藥', 'N05AA': 'Phenothiazines 類，脂肪鏈', 'N05AB': 'Phenothiazines 類，Piperazine 結構', 'N05AC': 'Phenothiazines 類，Piperidine 結構', 'N05AD': 'Butyrophenone 衍生物', 'N05AE': 'Indole 衍生物', 'N05AF': 'Thioxanthene 衍生物', 'N05AG': 'Diphenylbutylpiperidine 衍生物', 'N05AH': 'Diazepines, oxazepines, thiazepines 及 oxepines', 'N05AL': 'Benzamides 類', 'N05AN': '鋰劑', 'N05AX': '其他抗精神病藥', 'N05B': '抗焦慮藥', 'N05BA': 'Benzodiazepine 衍生物', 'N05BB': 'Diphenylmethane 衍生物', 'N05BC': 'Carbamates 類', 'N05BD': 'Dibenzo-bicyclo-octadiene 衍生物', 'N05BE': 'Azaspirodecanedione 衍生物', 'N05BX': '其他抗焦慮藥', 'N05C': '催眠及鎮靜藥', 'N05CA': '巴比妥類，單方', 'N05CB': '巴比妥類，複方', 'N05CC': '醛類及其衍生物', 'N05CD': 'Benzodiazepine 衍生物', 'N05CE': 'Piperidinedione 衍生物', 'N05CF': '類 Benzodiazepine 藥物', 'N05CH': 'Melatonin 受體致效劑', 'N05CJ': 'Orexin 受體拮抗劑', 'N05CM': '其他催眠及鎮靜藥', 'N05CX': '催眠及鎮靜藥之複方，不含巴比妥類',
+        'N06': '精神興奮藥', 'N06A': '抗憂鬱藥', 'N06AA': '非選擇性單胺再吸收抑制劑', 'N06AB': '選擇性血清素再吸收抑制劑', 'N06AF': '非選擇性單胺氧化酶抑制劑', 'N06AG': '單胺氧化酶 A 抑制劑', 'N06AX': '其他抗憂鬱藥', 'N06B': '精神興奮藥，ADHD 用藥及益智藥', 'N06BA': '中樞作用交感神經興奮劑', 'N06BC': '咖啡因衍生物', 'N06BX': '其他精神興奮藥及益智藥', 'N06C': '安定藥和精神興奮藥的複方', 'N06CA': '抗憂鬱藥與安定藥的複方', 'N06CB': '精神興奮藥與安定藥的複方', 'N06D': '失智症用藥', 'N06DA': '抗膽鹼脂酶藥', 'N06DX': '其他失智症用藥',
+        'N07': '其他神經系統用藥', 'N07A': '擬副交感神經藥', 'N07AA': '抗膽鹼脂酶藥', 'N07AB': '膽鹼酯類', 'N07AX': '其他擬副交感神經藥', 'N07B': '戒癮用藥', 'N07BA': '尼古丁依賴治療藥', 'N07BB': '酒精依賴治療藥', 'N07BC': '鴉片依賴治療藥', 'N07C': '抗暈眩藥', 'N07CA': '抗暈眩藥', 'N07X': '其他神經系統用藥', 'N07XA': '神經節苷脂及衍生物', 'N07XX': '其他神經系統用藥',
+
+        'P': '抗寄生蟲藥、殺蟲劑及驅蟲劑', 'P01': '抗原蟲藥', 'P01A': '抗阿米巴藥及相關藥物', 'P01AA': 'Hydroxyquinoline 衍生物', 'P01AB': 'Nitroimidazole 衍生物', 'P01AC': 'Dichloroacetamide 衍生物', 'P01AR': '砷化合物', 'P01AX': '其他抗阿米巴藥及相關藥物', 'P01B': '抗瘧疾藥', 'P01BA': 'Aminoquinolines 類', 'P01BB': 'Biguanides 類', 'P01BC': '甲醇喹啉類', 'P01BD': 'Diaminopyrimidines 類', 'P01BE': 'Artemisinin 及其衍生物', 'P01BF': 'Artemisinin 及其衍生物，複方', 'P01BX': '其他抗瘧疾藥', 'P01C': '抗利什曼原蟲藥及抗錐蟲藥', 'P01CA': 'Nitroimidazole 衍生物', 'P01CB': '銻化合物', 'P01CC': 'Nitrofuran 衍生物', 'P01CD': '砷化合物', 'P01CX': '其他抗利什曼原蟲藥及抗錐蟲藥',
+        'P02': '驅蠕蟲藥', 'P02B': '抗吸蟲藥', 'P02BA': 'Quinoline 衍生物及其相關物質', 'P02BB': '有機磷化合物', 'P02BX': '其他抗吸蟲藥', 'P02C': '抗線蟲藥', 'P02CA': 'Benzimidazole 衍生物', 'P02CB': 'Piperazine 及其衍生物', 'P02CC': 'Tetrahydropyrimidine 衍生物', 'P02CE': 'Imidazothiazole 衍生物', 'P02CF': 'Avermectines 類', 'P02CX': '其他抗線蟲藥', 'P02D': '抗絛蟲藥', 'P02DA': '水楊酸衍生物', 'P02DX': '其他抗絛蟲藥',
+        'P03': '體外寄生蟲殺滅劑', 'P03A': '體外寄生蟲殺滅劑，包含殺疥蟎劑', 'P03AA': '含硫製品', 'P03AB': '含氯製品', 'P03AC': 'Pyrethrines，包含合成製品', 'P03AX': '其他體外寄生蟲殺滅劑，包含殺疥蟎劑', 'P03B': '殺蟲劑及驅蟲劑', 'P03BA': 'Pyrethrines 類', 'P03BX': '其他殺蟲劑及驅蟲劑',
+
+        'R': '呼吸系統', 'R01': '鼻部用藥', 'R01A': '局部用解充血劑及其他鼻部用藥', 'R01AA': '擬交感神經劑，單方', 'R01AB': '擬交感神經劑，複方', 'R01AC': '抗過敏藥，不含皮質類固醇', 'R01AD': '皮質類固醇', 'R01AX': '其他鼻部用藥', 'R01B': '全身用鼻部解充血劑', 'R01BA': '擬交感神經劑',
+        'R02': '喉部用藥', 'R02A': '喉部用藥', 'R02AA': '防腐劑', 'R02AB': '抗生素', 'R02AD': '麻醉劑，局部用',
+        'R03': '阻塞性呼吸道疾病用藥', 'R03A': '吸入型腎上腺素性藥物', 'R03AA': 'Alpha 及 Beta-腎上腺素受體致效劑', 'R03AB': '非選擇性 Beta-腎上腺素受體致效劑', 'R03AC': '選擇性 Beta-2 腎上腺素受體致效劑', 'R03AH': '腎上腺素性藥物之複方', 'R03AK': '腎上腺素性藥物與皮質類固醇或其他藥物之複方', 'R03AL': '腎上腺素性藥物與抗膽鹼劑之複方', 'R03B': '其他吸入型阻塞性呼吸道疾病用藥', 'R03BA': '糖皮質類固醇', 'R03BB': '抗膽鹼劑', 'R03BC': '抗過敏藥，不含皮質類固醇', 'R03BX': '其他吸入型阻塞性呼吸道疾病用藥', 'R03C': '全身用腎上腺素性藥物', 'R03CA': 'Alpha 及 Beta-腎上腺素受體致效劑', 'R03CB': '非選擇性 Beta-腎上腺素受體致效劑', 'R03CC': '選擇性 Beta-2 腎上腺素受體致效劑', 'R03CK': '腎上腺素性藥物與其他阻塞性呼吸道疾病用藥之複方', 'R03D': '其他全身用阻塞性呼吸道疾病用藥', 'R03DA': '黃嘌呤類', 'R03DB': '黃嘌呤類與腎上腺素性藥物之複方', 'R03DC': '白三烯受體拮抗劑', 'R03DX': '其他全身用阻塞性呼吸道疾病用藥',
+        'R05': '咳嗽及感冒用藥', 'R05C': '祛痰劑，不含止咳藥', 'R05CA': '祛痰劑', 'R05CB': '黏液溶解劑', 'R05D': '止咳藥，不含祛痰劑', 'R05DA': '鴉片生物鹼及其衍生物', 'R05DB': '其他止咳藥', 'R05F': '止咳藥與祛痰劑之複方', 'R05FA': '鴉片衍生物與祛痰劑', 'R05FB': '其他止咳藥與祛痰劑', 'R05X': '其他感冒製劑',
+        'R06': '全身用抗組織胺', 'R06A': '全身用抗組織胺', 'R06AA': '胺基烷基醚類', 'R06AB': '烷基胺類', 'R06AC': '乙二胺類', 'R06AD': '吩噻嗪衍生物', 'R06AE': 'Piperazine 衍生物', 'R06AX': '其他全身用抗組織胺',
+        'R07': '其他呼吸系統用藥', 'R07A': '其他呼吸系統用藥', 'R07AA': '肺界面活性劑', 'R07AB': '呼吸興奮劑', 'R07AX': '其他呼吸系統用藥',
+
+        'S': '感覺器官', 'S01': '眼科用藥', 'S01A': '抗感染藥', 'S01AA': '抗生素', 'S01AB': '磺胺類', 'S01AD': '抗病毒藥', 'S01AE': 'Fluoroquinolones 類', 'S01AX': '其他抗感染藥', 'S01B': '抗發炎藥', 'S01BA': '皮質類固醇', 'S01BB': '皮質類固醇與散瞳劑之複方', 'S01BC': '非類固醇抗發炎藥', 'S01C': '抗發炎藥與抗感染藥之複方', 'S01CA': '皮質類固醇與抗感染藥之複方', 'S01CB': '皮質類固醇/抗感染藥/散瞳劑之複方', 'S01CC': '非類固醇抗發炎藥與抗感染藥之複方', 'S01E': '青光眼治療藥及縮瞳劑', 'S01EA': '擬交感神經藥', 'S01EB': '擬副交感神經藥', 'S01EC': '碳酸酐酶抑制劑', 'S01ED': 'Beta-阻斷劑', 'S01EE': '前列腺素類似物', 'S01EX': '其他青光眼治療藥', 'S01F': '散瞳劑及睫狀肌麻痺劑', 'S01FA': '抗膽鹼劑', 'S01FB': '擬交感神經劑', 'S01G': '解充血劑及抗過敏劑', 'S01GA': '擬交感神經劑，解充血用', 'S01GX': '其他抗過敏劑', 'S01H': '局部麻醉劑', 'S01HA': '局部麻醉劑', 'S01J': '診斷試劑', 'S01JA': '染色劑', 'S01JX': '其他眼科診斷試劑', 'S01K': '外科輔助', 'S01KA': '黏彈性物質', 'S01KX': '其他外科輔助', 'S01L': '眼部血管病變用藥', 'S01LA': '抗新生血管劑', 'S01X': '其他眼科用藥', 'S01XA': '其他眼科用藥',
+        'S02': '耳科用藥', 'S02A': '抗感染藥', 'S02AA': '抗感染藥', 'S02B': '皮質類固醇', 'S02BA': '皮質類固醇', 'S02C': '皮質類固醇與抗感染藥之複方', 'S02CA': '皮質類固醇與抗感染藥之複方', 'S02D': '其他耳科用藥', 'S02DA': '止痛劑及麻醉劑', 'S02DC': '惰性製劑',
+        'S03': '眼科及耳科製劑', 'S03A': '抗感染藥', 'S03AA': '抗感染藥', 'S03B': '皮質類固醇', 'S03BA': '皮質類固醇', 'S03C': '皮質類固醇與抗感染藥之複方', 'S03CA': '皮質類固醇與抗感染藥之複方', 'S03D': '其他眼科及耳科製劑',
+
+        'V': '其他類', 'V01': '過敏原', 'V01A': '過敏原', 'V01AA': '過敏原萃取物', 'V03': '其他治療用藥品', 'V03A': '其他治療用藥品', 'V03AB': '解毒劑', 'V03AC': '鐵螯合劑', 'V03AE': '治療高血鉀及高血磷藥物', 'V03AF': '解毒劑，抗腫瘤治療用', 'V03AG': '治療高血鈣藥物', 'V03AH': '治療低血糖藥物', 'V03AK': '組織黏合劑', 'V03AM': '栓塞劑', 'V03AN': '醫療氣體', 'V03AX': '其他治療用藥品', 'V03AZ': '神經抑制劑', 'V04': '診斷用藥', 'V04C': '其他診斷用藥', 'V04CA': '糖尿病檢測用', 'V04CB': '脂肪吸收檢測用', 'V04CC': '膽管功能檢測用', 'V04CD': '腦下垂體功能檢測用', 'V04CE': '肝功能檢測用', 'V04CF': '結核病診斷用', 'V04CG': '胃液分泌檢測用', 'V04CH': '腎功能及輸尿管損傷檢測用', 'V04CJ': '甲狀腺功能檢測用', 'V04CK': '胰臟功能檢測用', 'V04CL': '過敏疾病檢測用', 'V04CM': '生育力障礙檢測用', 'V04CX': '其他診斷用藥', 'V06': '一般營養品', 'V06A': '減重飲食配方', 'V06B': '蛋白質補充品', 'V06C': '嬰兒營養品', 'V06D': '其他營養品', 'V07': '其他非治療用產品', 'V07A': '其他非治療用產品', 'V07AA': '貼布', 'V07AB': '溶劑及稀釋劑', 'V07AC': '輸血輔助用品', 'V07AD': '驗血輔助用品', 'V07AN': '失禁輔助用品', 'V07AR': '敏感度檢測圓片及錠劑', 'V07AS': '造口護理用品', 'V07AT': '化妝品', 'V07AV': '工業用消毒劑', 'V07AX': '洗滌劑等', 'V07AY': '其他非治療用輔助產品', 'V07AZ': '分析用化學品及試劑', 'V08': '對比劑', 'V08A': 'X 光對比劑，碘化物', 'V08AA': '水溶性、腎向性、高滲透壓 X 光對比劑', 'V08AB': '水溶性、腎向性、低滲透壓 X 光對比劑', 'V08AC': '水溶性、肝向性 X 光對比劑', 'V08AD': '非水溶性 X 光對比劑', 'V08B': 'X 光對比劑，非碘化物', 'V08BA': '含硫酸鋇之 X 光對比劑', 'V08C': '磁振造影對比劑', 'V08CA': '順磁性對比劑', 'V08CB': '超順磁性對比劑', 'V08CX': '其他磁振造影對比劑', 'V08D': '超音波對比劑', 'V08DA': '超音波對比劑', 'V09': '診斷用放射性藥物', 'V09A': '中樞神經系統', 'V09B': '骨骼', 'V09C': '腎臟系統', 'V09D': '肝臟及網狀內皮系統', 'V09E': '呼吸系統', 'V09F': '甲狀腺', 'V09G': '心血管系統', 'V09H': '發炎及感染偵測', 'V09I': '腫瘤偵測', 'V09IA': 'Technetium (99mTc) 化合物', 'V09X': '其他診斷用放射性藥物', 'V10': '治療用放射性藥物', 'V10A': '抗發炎劑', 'V10B': '疼痛緩解劑', 'V10X': '其他治療用放射性藥物', 'V20': '外科敷料', 'V20A': '外科敷料',
     };
 
     createApp({
@@ -391,7 +426,7 @@
                     let isDiscontinued = (status1 === 'Y' || status2 === 'Y') && !(status1 === 'N' || status2 === 'N');
                     let isOutOfStock = (status1 === 'C' || status2 === 'C') && !isDiscontinued && !(status1 === 'N' || status2 === 'N');
 
-                    let atcMain = '', atcSub = '', atcSubSub = '';
+                    let atcMain = '', atcSub = '', atcGroup = '', atcSubSub = '';
                     if (atc.length >= 1) {
                         const c1 = atc.substring(0, 1);
                         atcMain = ATC_DICT[c1] || `分類 ${c1}`; 
@@ -399,6 +434,10 @@
                     if (atc.length >= 3) {
                         const c3 = atc.substring(0, 3);
                         atcSub = ATC_DICT[c3] || c3; 
+                    }
+                    if (atc.length >= 4) {
+                        const c4 = atc.substring(0, 4);
+                        atcGroup = ATC_DICT[c4] || c4;
                     }
                     if (atc.length >= 5) {
                         const c5 = atc.substring(0, 5);
@@ -415,6 +454,7 @@
                         leafletLink: row['超連結']||'', atcCode: atc, 
                         atcMain, atcMainCode: atc.substring(0,1), 
                         atcSub, atcSubCode: atc.substring(0,3),
+                        atcGroup, atcGroupCode: atc.substring(0,4),
                         atcSubSub, atcSubSubCode: atc.substring(0,5)
                     };
                 }).filter(d => d !== null);
@@ -433,20 +473,10 @@
                         if (d.atcSubCode && d.atcSub) {
                             if (!groups[d.atcMainCode].subs[d.atcSubCode]) {
                                 groups[d.atcMainCode].subs[d.atcSubCode] = { 
-                                    code: d.atcSubCode, name: d.atcSub, count: 0, 
-                                    subsubs: {}, hasSubSub: false 
+                                    code: d.atcSubCode, name: d.atcSub, count: 0 
                                 };
                             }
                             groups[d.atcMainCode].subs[d.atcSubCode].count++;
-                            if (d.atcSubSubCode && d.atcSubSub) {
-                                if (!groups[d.atcMainCode].subs[d.atcSubCode].subsubs[d.atcSubSubCode]) {
-                                    groups[d.atcMainCode].subs[d.atcSubCode].subsubs[d.atcSubSubCode] = {
-                                        code: d.atcSubSubCode, name: d.atcSubSub, count: 0
-                                    };
-                                }
-                                groups[d.atcMainCode].subs[d.atcSubCode].subsubs[d.atcSubSubCode].count++;
-                                groups[d.atcMainCode].subs[d.atcSubCode].hasSubSub = true;
-                            }
                         }
                     }
                 });
@@ -470,12 +500,10 @@
                     return [];
                 }
                 return result.sort((a, b) => {
-                    const getScore = (drug) => {
-                        if (drug.isDiscontinued) return 3;
-                        if (drug.isOutOfStock) return 2;
-                        return 1;
-                    };
-                    return getScore(a) - getScore(b);
+                    // Sort by ATC code
+                    if (a.atcCode < b.atcCode) return -1;
+                    if (a.atcCode > b.atcCode) return 1;
+                    return 0;
                 });
             });
 
@@ -486,8 +514,9 @@
                 }
                 const groups = {};
                 list.forEach(drug => {
-                    let groupCode = drug.atcSubSubCode || drug.atcSubCode || 'Other';
-                    let groupName = ATC_DICT[groupCode] || groupCode; // 若無中文名則顯示代碼
+                    // Group by ATC 4-level code
+                    let groupCode = drug.atcGroupCode || 'Other';
+                    let groupName = ATC_DICT[groupCode] || groupCode; 
                     if (!groups[groupCode]) {
                         groups[groupCode] = { code: groupCode, name: groupName, drugs: [] };
                     }
@@ -506,19 +535,8 @@
             };
 
             const selectMinorCategory = (sub) => {
-                if (sub.count >= 10 && sub.hasSubSub) {
-                    selectedMinor.value = { ...sub, subsubs: Object.values(sub.subsubs).sort((a,b) => a.code.localeCompare(b.code)) };
-                    viewMode.value = 'sub_minor_list';
-                } else {
-                    filterCategory.value = sub.code;
-                    currentCategoryName.value = sub.name;
-                    viewMode.value = 'result_list';
-                }
-            };
-
-            const selectSubMinorCategory = (subsub) => {
-                filterCategory.value = subsub.code;
-                currentCategoryName.value = subsub.name;
+                filterCategory.value = sub.code;
+                currentCategoryName.value = sub.name;
                 viewMode.value = 'result_list';
             };
 
@@ -539,7 +557,7 @@
             return {
                 keyword, filteredDrugs, groupedDrugs, selectedDrug, loading, error, 
                 viewMode, atcGroups, selectedMajor, selectedMinor, filterCategory, currentCategoryName,
-                onSearchInput, selectMajorCategory, selectMinorCategory, selectSubMinorCategory, resetToHome,
+                onSearchInput, selectMajorCategory, selectMinorCategory, resetToHome,
                 openDetail, closeDetail, imageLoadError, searchNhiPrice
             };
         }
