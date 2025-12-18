@@ -249,18 +249,26 @@
                     <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-2 border-b pb-1">基本資料</h3>
                     <div class="grid grid-cols-1 gap-3">
                         <div><span class="text-xs text-gray-500 block">學名</span><span class="text-gray-900 font-medium select-all">{{ selectedDrug.genericName }}</span></div>
-                        <div class="grid grid-cols-2 gap-2">
+                       <div class="grid grid-cols-2 gap-2">
                              <div><span class="text-xs text-gray-500 block">院內代碼</span><span class="text-gray-900 select-all">{{ selectedDrug.code }}</span></div>
+                             
                              <div>
-                                <span class="text-xs text-gray-500 block">健保碼 (點擊查價)</span>
-                                <a v-if="selectedDrug.nhiCode && selectedDrug.nhiCode !== '-'" href="#" @click.prevent="searchNhiPrice(selectedDrug.nhiCode)" class="text-blue-600 font-bold hover:text-blue-800 underline flex items-center select-all">
-                                    {{ selectedDrug.nhiCode }}<i class="fa-solid fa-magnifying-glass-dollar ml-1 text-xs"></i>
-                                </a>
-                                <span v-else class="text-gray-900">-</span>
+                                <div class="mb-2">
+                                    <span class="text-xs text-gray-500 block">健保碼 (點擊查價)</span>
+                                    <a v-if="selectedDrug.nhiCode && selectedDrug.nhiCode !== '-'" href="#" @click.prevent="searchNhiPrice(selectedDrug.nhiCode)" class="text-blue-600 font-bold hover:text-blue-800 underline flex items-center select-all">
+                                        {{ selectedDrug.nhiCode }}<i class="fa-solid fa-magnifying-glass-dollar ml-1 text-xs"></i>
+                                    </a>
+                                    <span v-else class="text-gray-900">-</span>
+                                </div>
+                                
+                                <div v-if="selectedDrug.selfPayPrice">
+                                    <span class="text-xs text-gray-500 block">自費價</span>
+                                    <span class="text-red-600 font-bold font-mono text-base">
+                                        {{ selectedDrug.selfPayPrice }}
+                                    </span>
+                                </div>
                             </div>
-                        </div>
-                         <div v-if="selectedDrug.components"><span class="text-xs text-gray-500 block">成份</span><span class="text-gray-900 text-sm">{{ selectedDrug.components }}</span></div>
-                    </div>
+                            </div>
                 </section>
 
                 <section>
@@ -483,16 +491,30 @@
                     }
 
                     return {
-                        code, nhiCode: row['健保碼']||'-', genericName: row['學名']||'', tradeName: row['商品名(英文)']||row['商品名']||'無商品名',
-                        indication: row['適應症']||row['臨床用途']||'', dosage: row['用量用法']||'', sideEffect: row['副作用']||'',
-                        patientNote: row['民眾注意事項']||row['警語']||'', renalNote: row['劑量調整']||'', components: row['藥品成分']||'',
-                        pregCategory: row['懷孕分級']||'', highAlert: row['高警訊藥品'], 
-                        isHighAlert: (row['高警訊藥品'] === 'Y'), isDiscontinued, isOutOfStock,
+                        code, 
+                        nhiCode: row['健保碼']||'-', 
+                        // === 新增這一行 ===
+                        selfPayPrice: row['自費價'] ? row['自費價'].trim() : '',
+                        // ================
+                        genericName: row['學名']||'', 
+                        tradeName: row['商品名(英文)']||row['商品名']||'無商品名',
+                        indication: row['適應症']||row['臨床用途']||'', 
+                        dosage: row['用量用法']||'', 
+                        sideEffect: row['副作用']||'',
+                        patientNote: row['民眾注意事項']||row['警語']||'', 
+                        renalNote: row['劑量調整']||'', 
+                        components: row['藥品成分']||'',
+                        pregCategory: row['懷孕分級']||'', 
+                        highAlert: row['高警訊藥品'], 
+                        isHighAlert: (row['高警訊藥品'] === 'Y'), 
+                        isDiscontinued, 
+                        isOutOfStock,
                         imgUrl: imgName ? `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/w_400,c_scale,q_auto,f_auto/${imgName}` : null,
-                        leafletLink: row['超連結']||'', atcCode: atc, 
+                        leafletLink: row['超連結']||'', 
+                        atcCode: atc, 
                         atcMain, atcMainCode: atc.substring(0,1), 
                         atcSub, atcSubCode: atc.substring(0,3),
-                        atcGroup, atcGroupCode: atc.substring(0,4), // 4碼名稱與代碼
+                        atcGroup, atcGroupCode: atc.substring(0,4),
                         atcSubSub, atcSubSubCode: atc.substring(0,5)
                     };
                 }).filter(d => d !== null);
@@ -638,5 +660,6 @@
 </script>
 </body>
 </html>
+
 
 
