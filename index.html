@@ -62,11 +62,7 @@
             </button>
         </div>
         
-        <div v-if="(viewMode === 'result_list' || viewMode === 'sub_minor_list') && filterCategory" class="mt-2 text-white text-xs flex items-center overflow-hidden">
-            <span class="opacity-70">分類：</span>
-            <span class="font-bold truncate ml-1 bg-blue-800 px-2 py-0.5 rounded">{{ currentCategoryName }}</span>
-        </div>
-    </header>
+        </header>
 
     <main class="flex-1 p-3 safe-area-bottom overflow-y-auto bg-gray-50">
         
@@ -138,6 +134,13 @@
         </div>
 
         <div v-if="viewMode === 'result_list'" class="animate-slide-up">
+            
+            <div v-if="filterCategory" class="flex items-center justify-between mb-3 px-1 sticky top-0 bg-gray-50 z-10 py-2">
+                <button @click="backToMinorList" class="text-blue-600 text-sm font-bold flex items-center">
+                    <i class="fa-solid fa-arrow-left mr-1"></i> 返回分類列表
+                </button>
+                <span class="text-xs text-gray-500 font-bold bg-white px-2 py-1 rounded shadow-sm border">{{ currentCategoryName }}</span>
+            </div>
             <div v-if="groupedDrugs.length === 0" class="text-center py-20 text-gray-400">
                 <i class="fa-regular fa-folder-open text-4xl mb-2"></i>
                 <p>找不到符合條件的藥品</p>
@@ -299,8 +302,10 @@
         'A06': '緩瀉劑', 'A06A': '緩瀉劑', 'A06AA': '軟便劑', 'A06AB': '接觸性緩瀉劑', 'A06AC': '膨脹性緩瀉劑', 'A06AD': '滲透壓緩瀉劑', 'A06AG': '灌腸劑', 'A06AH': '周邊鴉片受體拮抗劑',
         'A07': '止瀉劑、腸道抗發炎/抗感染劑', 'A07A': '腸道抗感染劑', 'A07AA': '抗生素', 'A07AB': '磺胺類藥物', 'A07AC': '咪唑衍生物', 'A07B': '腸道吸附劑', 'A07BA': '活性碳製劑', 'A07BB': '鉍製劑', 'A07BC': '其他腸道吸附劑',
         'A07D': '止瀉劑', 'A07DA': '止瀉劑', 'A07E': '腸道抗發炎劑', 'A07EA': '局部作用皮質類固醇', 'A07EB': '抗過敏劑，不含皮質類固醇', 'A07EC': '氨基水楊酸及其類似物',
+        // === 已補上 A08 和 A09 ===
         'A08': '減肥藥', 'A08A': '減肥藥', 
         'A09': '消化劑 (含酵素)', 'A09A': '消化劑 (含酵素)',
+        // =======================
         'A10': '糖尿病用藥', 'A10A': '胰島素及其類似物', 'A10AB': '速效胰島素', 'A10AC': '中效胰島素', 'A10AD': '預混胰島素', 'A10AE': '長效胰島素', 'A10AF': '吸入型胰島素',
         'A10B': '口服降血糖藥', 'A10BA': '雙胍類', 'A10BB': '磺醯尿素類', 'A10BC': '磺醯胺類', 'A10BD': '複方降血糖藥', 'A10BF': 'α-葡萄糖苷酶抑制劑', 'A10BG': 'Thiazolidinediones', 'A10BH': 'DPP-4 抑制劑', 'A10BJ': 'GLP-1 類似物', 'A10BK': 'SGLT2 抑制劑', 'A10BX': '其他降血糖藥',
         'A11': '維生素', 'A11A': '綜合維生素，複方', 'A11B': '綜合維生素，單方', 'A11C': '維生素A及D', 'A11CA': '維生素A，單方', 'A11CC': '維生素D及其類似物', 'A11D': '維生素B1及其複方', 'A11E': '維生素B群', 'A11G': '抗壞血酸（維生素C）', 'A11H': '其他純維生素製劑',
@@ -574,6 +579,13 @@
                 currentCategoryName.value = sub.name;
                 viewMode.value = 'result_list';
             };
+            
+            // 新增：返回次分類列表
+            const backToMinorList = () => {
+                filterCategory.value = ''; 
+                currentCategoryName.value = '';
+                viewMode.value = 'minor_list';
+            };
 
             const resetToHome = () => { keyword.value = ''; filterCategory.value = ''; viewMode.value = 'home'; };
 
@@ -593,11 +605,11 @@
                 keyword, filteredDrugs, groupedDrugs, selectedDrug, loading, error, 
                 viewMode, atcGroups, selectedMajor, filterCategory, currentCategoryName,
                 onSearchInput, selectMajorCategory, selectMinorCategory, resetToHome,
-                openDetail, closeDetail, imageLoadError, searchNhiPrice
+                openDetail, closeDetail, imageLoadError, searchNhiPrice,
+                backToMinorList // 記得導出此函式
             };
         }
     }).mount('#app');
 </script>
 </body>
 </html>
-
