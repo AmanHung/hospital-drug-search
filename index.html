@@ -538,7 +538,7 @@
                     return [];
                 }
 
-                // 修改：排序原則：ATC 4碼 (Group) → ATC 5碼 (SubSub) → 學名
+                // 修改：排序原則：ATC 4碼 → ATC 5碼 → 學名 → 狀態(已停用殿後)
                 return result.sort((a, b) => {
                     // 1. 先比對 ATC 4碼 (確保同類別在一起)
                     if (a.atcGroupCode < b.atcGroupCode) return -1;
@@ -548,9 +548,18 @@
                     if (a.atcSubSubCode < b.atcSubSubCode) return -1;
                     if (a.atcSubSubCode > b.atcSubSubCode) return 1;
 
-                    // 3. 最後比對學名
-                    if (a.genericName < b.genericName) return -1;
-                    if (a.genericName > b.genericName) return 1;
+                    // 3. 比對學名 (讓同成分的藥品排在一起)
+                    // 使用 toLowerCase() 避免大小寫影響排序
+                    const nameA = (a.genericName || '').toLowerCase();
+                    const nameB = (b.genericName || '').toLowerCase();
+                    if (nameA < nameB) return -1;
+                    if (nameA > nameB) return 1;
+
+                    // 4. 新增：比對狀態 (同成分中，已停用的排在最後)
+                    // false (0, 啟用) 會排在 true (1, 停用) 前面
+                    if (a.isDiscontinued !== b.isDiscontinued) {
+                        return a.isDiscontinued ? 1 : -1;
+                    }
                     
                     return 0;
                 });
@@ -629,4 +638,5 @@
 </script>
 </body>
 </html>
+
 
