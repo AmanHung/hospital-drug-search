@@ -288,9 +288,24 @@
                     <div class="grid grid-cols-1 gap-3">
                         <div><span class="text-xs text-gray-500 block">學名</span><span class="text-gray-900 font-medium select-all">{{ selectedDrug.genericName }}</span></div>
                        <div class="grid grid-cols-2 gap-2">
-                             <div><span class="text-xs text-gray-500 block">院內代碼</span><span class="text-gray-900 select-all">{{ selectedDrug.code }}</span></div>
-                             
                              <div>
+                                <span class="text-xs text-gray-500 block">院內代碼</span>
+                                <span class="text-gray-900 select-all">{{ selectedDrug.code }}</span>
+                                
+                                <div v-if="(selectedDrug.isDiscontinued || selectedDrug.isOutOfStock) && (selectedDrug.sub1 || selectedDrug.sub2)" class="mt-2">
+                                    <span class="text-[10px] text-red-500 font-bold block mb-1">
+                                        <i class="fa-solid fa-arrow-right-arrow-left mr-1"></i> 建議替代品項
+                                    </span>
+                                    <div class="flex flex-wrap gap-1">
+                                        <button v-if="selectedDrug.sub1" @click="openSubstitute(selectedDrug.sub1)" class="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs px-2 py-1 rounded transition flex items-center">
+                                            {{ selectedDrug.sub1 }} <i class="fa-solid fa-external-link-alt ml-1 text-[10px]"></i>
+                                        </button>
+                                        <button v-if="selectedDrug.sub2" @click="openSubstitute(selectedDrug.sub2)" class="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs px-2 py-1 rounded transition flex items-center">
+                                            {{ selectedDrug.sub2 }} <i class="fa-solid fa-external-link-alt ml-1 text-[10px]"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                </div>
                                 <div class="mb-2">
                                     <span class="text-xs text-gray-500 block">健保碼 (點擊查價)</span>
                                     <a v-if="selectedDrug.nhiCode && selectedDrug.nhiCode !== '-'" href="#" @click.prevent="searchNhiPrice(selectedDrug.nhiCode)" class="text-blue-600 font-bold hover:text-blue-800 underline flex items-center select-all">
@@ -477,13 +492,16 @@
                 loading.value = true;
                 Promise.all([fetchCsv(DRUG_DATA_URL), fetchCsv(ATC_DATA_URL)])
                     .then(([drugData, atcData]) => {
-                        // 修改1：同時提取 ATC 碼和自費價
                         const atcMap = {};
                         atcData.forEach(row => {
                             if(row['藥品代碼']) {
                                 atcMap[row['藥品代碼'].trim()] = {
                                     atc: row['ATC碼'] ? row['ATC碼'].trim().toUpperCase() : '',
-                                    price: row['自費價'] ? row['自費價'].trim() : '' // 從 ATC_DATA_URL 提取自費價
+                                    price: row['自費價'] ? row['自費價'].trim() : '',
+                                    // === 新增：讀取替代藥品代碼 ===
+                                    sub1: row['替代院內代碼1'] ? row['替代院內代碼1'].trim() : '',
+                                    sub2: row['替代院內代碼2'] ? row['替代院內代碼2'].trim() : ''
+                                    // ==========================
                                 };
                             }
                         });
@@ -504,63 +522,41 @@
                     const isValidCode = /^[A-Za-z]{4}\d{2}$/.test(code);
                     if (!isValidCode) return null;
 
-                    // 修改2：從 atcMap 物件中解構取得資料
-                    const mapData = atcMap[code] || { atc: '', price: '' };
+                    const mapData = atcMap[code] || { atc: '', price: '', sub1: '', sub2: '' };
                     const atc = mapData.atc;
                     const selfPayPrice = mapData.price;
+                    // === 取得替代代碼 ===
+                    const sub1 = mapData.sub1;
+                    const sub2 = mapData.sub2;
 
                     const imgName = row['圖檔名稱'] ? row['圖檔名稱'].trim() : '';
                     
                     const status1 = row['門診停用否'] ? row['門診停用否'].trim().toUpperCase() : '';
                     const status2 = row['住院停用否'] ? row['住院停用否'].trim().toUpperCase() : '';
                     let isDiscontinued = (status1 === 'Y' || status2 === 'Y') && !(status1 === 'N' || status2 === 'N');
+                    // 修正後的缺貨邏輯
                     let isOutOfStock = (status1 === 'C' || status2 === 'C') && !isDiscontinued;
 
-                    // ATC Parsing: 第1層(1碼), 第2層(3碼), 第3層(4碼), 第4層(5碼)
+                    // ATC Parsing (保持原樣，省略以節省空間)
                     let atcMain = '', atcSub = '', atcGroup = '', atcSubSub = '';
-                    if (atc.length >= 1) {
-                        const c1 = atc.substring(0, 1);
-                        atcMain = ATC_DICT[c1] || `分類 ${c1}`; 
-                    }
-                    if (atc.length >= 3) {
-                        const c3 = atc.substring(0, 3);
-                        atcSub = ATC_DICT[c3] || c3; 
-                    }
-                    // 新增 4碼 解析 (用於分組標題)
-                    if (atc.length >= 4) {
-                        const c4 = atc.substring(0, 4);
-                        atcGroup = ATC_DICT[c4] || c4;
-                    }
-                    if (atc.length >= 5) {
-                        const c5 = atc.substring(0, 5);
-                        atcSubSub = ATC_DICT[c5] || c5; 
-                    }
+                    if (atc.length >= 1) { const c1 = atc.substring(0, 1); atcMain = ATC_DICT[c1] || `分類 ${c1}`; }
+                    if (atc.length >= 3) { const c3 = atc.substring(0, 3); atcSub = ATC_DICT[c3] || c3; }
+                    if (atc.length >= 4) { const c4 = atc.substring(0, 4); atcGroup = ATC_DICT[c4] || c4; }
+                    if (atc.length >= 5) { const c5 = atc.substring(0, 5); atcSubSub = ATC_DICT[c5] || c5; }
 
                     return {
-                        code, 
-                        nhiCode: row['健保碼']||'-', 
-                        // 修改3：使用正確對應過來的自費價
-                        selfPayPrice: selfPayPrice,
-                        genericName: row['學名']||'', 
-                        tradeName: row['商品名(英文)']||row['商品名']||'無商品名',
-                        indication: row['適應症']||row['臨床用途']||'', 
-                        dosage: row['用量用法']||'', 
-                        sideEffect: row['副作用']||'',
-                        patientNote: row['民眾注意事項']||row['警語']||'', 
-                        renalNote: row['劑量調整']||'', 
-                        components: row['藥品成分']||'',
-                        pregCategory: row['懷孕分級']||'', 
-                        highAlert: row['高警訊藥品'], 
-                        isHighAlert: (row['高警訊藥品'] === 'Y'), 
-                        isDiscontinued, 
-                        isOutOfStock,
+                        code, nhiCode: row['健保碼']||'-', selfPayPrice,
+                        // === 新增替代藥品欄位 ===
+                        sub1, sub2,
+                        // ======================
+                        genericName: row['學名']||'', tradeName: row['商品名(英文)']||row['商品名']||'無商品名',
+                        indication: row['適應症']||row['臨床用途']||'', dosage: row['用量用法']||'', sideEffect: row['副作用']||'',
+                        patientNote: row['民眾注意事項']||row['警語']||'', renalNote: row['劑量調整']||'', components: row['藥品成分']||'',
+                        pregCategory: row['懷孕分級']||'', highAlert: row['高警訊藥品'], isHighAlert: (row['高警訊藥品'] === 'Y'), 
+                        isDiscontinued, isOutOfStock,
                         imgUrl: imgName ? `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/w_400,c_scale,q_auto,f_auto/${imgName}` : null,
-                        leafletLink: row['超連結']||'', 
-                        atcCode: atc, 
-                        atcMain, atcMainCode: atc.substring(0,1), 
-                        atcSub, atcSubCode: atc.substring(0,3),
-                        atcGroup, atcGroupCode: atc.substring(0,4),
-                        atcSubSub, atcSubSubCode: atc.substring(0,5)
+                        leafletLink: row['超連結']||'', atcCode: atc, atcMain, atcMainCode: atc.substring(0,1), 
+                        atcSub, atcSubCode: atc.substring(0,3), atcGroup, atcGroupCode: atc.substring(0,4), atcSubSub, atcSubSubCode: atc.substring(0,5)
                     };
                 }).filter(d => d !== null);
 
@@ -698,6 +694,17 @@
             const openDetail = (drug) => selectedDrug.value = drug;
             const closeDetail = () => selectedDrug.value = null;
             const imageLoadError = (e) => { e.target.style.display = 'none'; }; 
+            // === 新增：點擊替代藥品代碼後，跳轉到該藥品詳情 ===
+            const openSubstitute = (subCode) => {
+                if (!subCode) return;
+                // 在現有的 drugs 陣列中尋找代碼相符的藥品
+                const targetDrug = drugs.value.find(d => d.code === subCode);
+                if (targetDrug) {
+                    selectedDrug.value = targetDrug;
+                } else {
+                    alert(`找不到替代藥品代碼：${subCode} 的資料`);
+                }
+            };
 
             onMounted(() => { fetchAllData(); });
 
@@ -706,13 +713,14 @@
                 viewMode, atcGroups, selectedMajor, filterCategory, currentCategoryName,
                 onSearchInput, selectMajorCategory, selectMinorCategory, resetToHome,
                 openDetail, closeDetail, imageLoadError, searchNhiPrice,
-                backToMinorList, outOfStockDrugs // 記得導出此函式
+                backToMinorList, outOfStockDrugs, openSubstitute // 記得導出此函式
             };
         }
     }).mount('#app');
 </script>
 </body>
 </html>
+
 
 
 
