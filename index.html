@@ -71,12 +71,49 @@
             <p>正在同步資料庫...</p>
         </div>
 
-        <div v-if="!loading && viewMode === 'home' && !keyword" class="flex flex-col items-center justify-center py-20 text-gray-400">
-            <div class="bg-gray-100 p-6 rounded-full mb-4">
-                <i class="fa-solid fa-magnifying-glass text-4xl text-gray-300"></i>
+        <div v-if="!loading && viewMode === 'home' && !keyword" class="py-4">
+            
+            <div v-if="outOfStockDrugs.length > 0" class="animate-slide-up">
+                <div class="bg-orange-50 border border-orange-200 rounded-xl overflow-hidden shadow-sm mx-1">
+                    <div class="bg-orange-100 px-4 py-3 border-b border-orange-200 flex justify-between items-center">
+                        <h3 class="text-orange-800 font-bold flex items-center">
+                            <i class="fa-solid fa-bullhorn mr-2"></i> 缺貨公告
+                        </h3>
+                        <span class="bg-orange-200 text-orange-900 text-xs px-2 py-0.5 rounded-full font-bold">
+                            共 {{ outOfStockDrugs.length }} 品項
+                        </span>
+                    </div>
+                    <div class="max-h-[60vh] overflow-y-auto p-2"> <div 
+                            v-for="drug in outOfStockDrugs" 
+                            :key="drug.code"
+                            @click="openDetail(drug)"
+                            class="bg-white p-3 mb-2 rounded-lg border border-orange-100 shadow-sm flex items-center cursor-pointer hover:bg-orange-50 transition"
+                        >
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center mb-1">
+                                    <span class="bg-gray-600 text-white text-[10px] px-1.5 py-0.5 rounded mr-2 font-mono">{{ drug.code }}</span>
+                                    <h4 class="font-bold text-gray-800 truncate text-sm">{{ drug.tradeName }}</h4>
+                                </div>
+                                <p class="text-gray-500 text-xs truncate pl-1">{{ drug.genericName }}</p>
+                            </div>
+                            <i class="fa-solid fa-chevron-right text-orange-300 text-xs ml-2"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-6 text-gray-400 text-sm">
+                    <p>或是輸入關鍵字進行查詢</p>
+                </div>
             </div>
-            <p class="font-bold text-gray-500">請輸入關鍵字搜尋</p>
-            <p class="text-sm mt-1">或是點擊上方按鈕依分類瀏覽</p>
+
+            <div v-else class="flex flex-col items-center justify-center py-20 text-gray-400">
+                <div class="bg-gray-100 p-6 rounded-full mb-4">
+                    <i class="fa-solid fa-magnifying-glass text-4xl text-gray-300"></i>
+                </div>
+                <p class="font-bold text-gray-500">目前無缺貨藥品</p>
+                <p class="text-sm mt-1">請輸入關鍵字搜尋</p>
+                <p class="text-sm mt-1">或是點擊上方按鈕依分類瀏覽</p>
+            </div>
         </div>
 
         <div v-if="viewMode === 'major_list'" class="animate-slide-up">
@@ -549,7 +586,14 @@
                 });
                 atcGroups.value = Object.values(groups).sort((a,b) => a.code.localeCompare(b.code));
             };
-
+            
+           // === 新增：自動篩選缺貨藥品 ===
+            const outOfStockDrugs = computed(() => {
+                return drugs.value
+                    .filter(d => d.isOutOfStock)
+                    .sort((a, b) => a.tradeName.localeCompare(b.tradeName)); // 依商品名排序
+            });
+            
            const filteredDrugs = computed(() => {
                 let result = [];
                 if (keyword.value) {
@@ -660,13 +704,14 @@
                 viewMode, atcGroups, selectedMajor, filterCategory, currentCategoryName,
                 onSearchInput, selectMajorCategory, selectMinorCategory, resetToHome,
                 openDetail, closeDetail, imageLoadError, searchNhiPrice,
-                backToMinorList // 記得導出此函式
+                backToMinorList, outOfStockDrugs // 記得導出此函式
             };
         }
     }).mount('#app');
 </script>
 </body>
 </html>
+
 
 
 
