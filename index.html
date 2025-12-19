@@ -83,7 +83,8 @@
                             共 {{ outOfStockDrugs.length }} 品項
                         </span>
                     </div>
-                    <div class="max-h-[60vh] overflow-y-auto p-2"> <div 
+                    <div class="max-h-[60vh] overflow-y-auto p-2"> 
+                        <div 
                             v-for="drug in outOfStockDrugs" 
                             :key="drug.code"
                             @click="openDetail(drug)"
@@ -513,7 +514,7 @@
                     const status1 = row['門診停用否'] ? row['門診停用否'].trim().toUpperCase() : '';
                     const status2 = row['住院停用否'] ? row['住院停用否'].trim().toUpperCase() : '';
                     let isDiscontinued = (status1 === 'Y' || status2 === 'Y') && !(status1 === 'N' || status2 === 'N');
-                    let isOutOfStock = (status1 === 'C' || status2 === 'C') && !isDiscontinued && !(status1 === 'N' || status2 === 'N');
+                    let isOutOfStock = (status1 === 'C' || status2 === 'C') && !isDiscontinued;
 
                     // ATC Parsing: 第1層(1碼), 第2層(3碼), 第3層(4碼), 第4層(5碼)
                     let atcMain = '', atcSub = '', atcGroup = '', atcSubSub = '';
@@ -591,7 +592,8 @@
             const outOfStockDrugs = computed(() => {
                 return drugs.value
                     .filter(d => d.isOutOfStock)
-                    .sort((a, b) => a.tradeName.localeCompare(b.tradeName)); // 依商品名排序
+                    // 修改：加入 || '' 避免因為資料缺失導致當機
+                    .sort((a, b) => (a.tradeName || '').localeCompare(b.tradeName || '')); 
             });
             
            const filteredDrugs = computed(() => {
@@ -711,6 +713,7 @@
 </script>
 </body>
 </html>
+
 
 
 
