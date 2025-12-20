@@ -208,6 +208,8 @@
                     </div>
 
                     <div class="absolute top-0 right-0 flex z-10">
+                        <span v-if="drug.isSelfPay" class="bg-green-600 text-white text-[10px] px-2 py-1 font-bold rounded-bl-lg ml-1 shadow-sm">自費</span>
+                        
                         <span v-if="drug.isDiscontinued" class="bg-gray-500 text-white text-[10px] px-2 py-1 font-bold rounded-bl-lg ml-1 shadow-sm">已停用</span>
                         <span v-if="drug.isOutOfStock" class="bg-orange-500 text-white text-[10px] px-2 py-1 font-bold rounded-bl-lg ml-1 shadow-sm">缺貨中</span>
                     </div>
@@ -539,15 +541,21 @@
                     const sub1 = mapData.sub1;
                     const sub2 = mapData.sub2;
 
+                    // === 修改區塊開始：健保碼與自費判斷 ===
+                    const rawNhi = row['健保碼'] ? row['健保碼'].trim() : '';
+                    const nhiCode = rawNhi || '-';
+                    // 如果健保碼是 '-' 或空值，則視為自費
+                    const isSelfPay = (nhiCode === '-');
+                    // === 修改區塊結束 ===
+
                     const imgName = row['圖檔名稱'] ? row['圖檔名稱'].trim() : '';
                     
                     const status1 = row['門診停用否'] ? row['門診停用否'].trim().toUpperCase() : '';
                     const status2 = row['住院停用否'] ? row['住院停用否'].trim().toUpperCase() : '';
                     let isDiscontinued = (status1 === 'Y' || status2 === 'Y') && !(status1 === 'N' || status2 === 'N');
-                    // 修正後的缺貨邏輯
                     let isOutOfStock = (status1 === 'C' || status2 === 'C') && !isDiscontinued;
 
-                    // ATC Parsing (保持原樣，省略以節省空間)
+                    // ... (中間省略 ATC 解析部分，保持原樣) ...
                     let atcMain = '', atcSub = '', atcGroup = '', atcSubSub = '';
                     if (atc.length >= 1) { const c1 = atc.substring(0, 1); atcMain = ATC_DICT[c1] || `分類 ${c1}`; }
                     if (atc.length >= 3) { const c3 = atc.substring(0, 3); atcSub = ATC_DICT[c3] || c3; }
@@ -555,7 +563,7 @@
                     if (atc.length >= 5) { const c5 = atc.substring(0, 5); atcSubSub = ATC_DICT[c5] || c5; }
 
                     return {
-                        code, nhiCode: row['健保碼']||'-', selfPayPrice,
+                        code, nhiCode: row['健保碼']||'-', isSelfPay, selfPayPrice,
                         // === 新增替代藥品欄位 ===
                         sub1, sub2,
                         // ======================
@@ -771,6 +779,7 @@
 </script>
 </body>
 </html>
+
 
 
 
