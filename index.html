@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js/dist/fuse.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f3f4f6; }
@@ -17,8 +18,6 @@
         [v-cloak] { display: none; }
         .animate-slide-up { animation: slideUp 0.3s ease-out; }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        
-        /* 錯誤提示框樣式優化 */
         .error-modal { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 100; background: #fee2e2; border: 1px solid #ef4444; color: #b91c1c; padding: 1rem; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 90%; text-align: center; }
     </style>
 </head>
@@ -61,8 +60,7 @@
                 <i class="fa-solid fa-layer-group mr-2"></i> 藥理分類查詢
             </button>
         </div>
-        
-        </header>
+    </header>
 
     <main class="flex-1 p-3 safe-area-bottom overflow-y-auto bg-gray-50">
         
@@ -72,7 +70,6 @@
         </div>
 
         <div v-if="!loading && viewMode === 'home' && !keyword" class="py-4">
-            
             <div v-if="outOfStockDrugs.length > 0" class="animate-slide-up">
                 <div class="bg-orange-50 border border-orange-200 rounded-xl overflow-hidden shadow-sm mx-1">
                     <div class="bg-orange-100 px-4 py-3 border-b border-orange-200 flex justify-between items-center">
@@ -84,12 +81,7 @@
                         </span>
                     </div>
                     <div class="max-h-[60vh] overflow-y-auto p-2"> 
-                        <div 
-                            v-for="drug in outOfStockDrugs" 
-                            :key="drug.code"
-                            @click="openDetail(drug)"
-                            class="bg-white p-3 mb-2 rounded-lg border border-orange-100 shadow-sm flex items-center cursor-pointer hover:bg-orange-50 transition"
-                        >
+                        <div v-for="drug in outOfStockDrugs" :key="drug.code" @click="openDetail(drug)" class="bg-white p-3 mb-2 rounded-lg border border-orange-100 shadow-sm flex items-center cursor-pointer hover:bg-orange-50 transition">
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center mb-1">
                                     <span class="bg-gray-600 text-white text-[10px] px-1.5 py-0.5 rounded mr-2 font-mono">{{ drug.code }}</span>
@@ -101,16 +93,10 @@
                         </div>
                     </div>
                 </div>
-                
-                <div class="text-center mt-6 text-gray-400 text-sm">
-                    <p>或是輸入關鍵字進行查詢</p>
-                </div>
+                <div class="text-center mt-6 text-gray-400 text-sm"><p>或是輸入關鍵字進行查詢</p></div>
             </div>
-
             <div v-else class="flex flex-col items-center justify-center py-20 text-gray-400">
-                <div class="bg-gray-100 p-6 rounded-full mb-4">
-                    <i class="fa-solid fa-magnifying-glass text-4xl text-gray-300"></i>
-                </div>
+                <div class="bg-gray-100 p-6 rounded-full mb-4"><i class="fa-solid fa-magnifying-glass text-4xl text-gray-300"></i></div>
                 <p class="font-bold text-gray-500">目前無缺貨藥品</p>
                 <p class="text-sm mt-1">請輸入關鍵字搜尋</p>
                 <p class="text-sm mt-1">或是點擊上方按鈕依分類瀏覽</p>
@@ -118,16 +104,10 @@
         </div>
 
         <div v-if="viewMode === 'major_list'" class="animate-slide-up">
-            <div class="flex items-center justify-between mb-3 px-1">
-                <h3 class="font-bold text-gray-700">藥理主分類</h3>
-            </div>
+            <div class="flex items-center justify-between mb-3 px-1"><h3 class="font-bold text-gray-700">藥理主分類</h3></div>
             <div class="grid grid-cols-1 gap-2">
-                <div v-for="cat in atcGroups" :key="cat.code" 
-                     @click="selectMajorCategory(cat)"
-                     class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-blue-50 transition">
-                    <div class="flex items-center">
-                        <span class="font-bold text-gray-800 text-lg">{{ cat.name }}</span>
-                    </div>
+                <div v-for="cat in atcGroups" :key="cat.code" @click="selectMajorCategory(cat)" class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-blue-50 transition">
+                    <div class="flex items-center"><span class="font-bold text-gray-800 text-lg">{{ cat.name }}</span></div>
                     <i class="fa-solid fa-chevron-right text-gray-300 text-sm"></i>
                 </div>
             </div>
@@ -135,18 +115,12 @@
 
         <div v-if="viewMode === 'minor_list'" class="animate-slide-up">
             <div class="flex items-center justify-between mb-3 px-1">
-                <button @click="viewMode = 'major_list'" class="text-blue-600 text-sm font-bold flex items-center">
-                    <i class="fa-solid fa-arrow-left mr-1"></i> 返回主分類
-                </button>
+                <button @click="viewMode = 'major_list'" class="text-blue-600 text-sm font-bold flex items-center"><i class="fa-solid fa-arrow-left mr-1"></i> 返回主分類</button>
                 <span class="text-xs text-gray-500 font-bold">{{ selectedMajor.name }}</span>
             </div>
             <div class="grid grid-cols-1 gap-2">
-                <div v-for="sub in selectedMajor.subs" :key="sub.code" 
-                     @click="selectMinorCategory(sub)"
-                     class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-indigo-50 transition">
-                    <div class="flex items-center">
-                        <span class="text-gray-800 font-medium">{{ sub.name }}</span>
-                    </div>
+                <div v-for="sub in selectedMajor.subs" :key="sub.code" @click="selectMinorCategory(sub)" class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-indigo-50 transition">
+                    <div class="flex items-center"><span class="text-gray-800 font-medium">{{ sub.name }}</span></div>
                     <span class="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full">{{ sub.count }} 筆</span>
                 </div>
             </div>
@@ -154,29 +128,20 @@
 
         <div v-if="viewMode === 'sub_minor_list'" class="animate-slide-up">
             <div class="flex items-center justify-between mb-3 px-1">
-                <button @click="viewMode = 'minor_list'" class="text-blue-600 text-sm font-bold flex items-center">
-                    <i class="fa-solid fa-arrow-left mr-1"></i> 返回子分類
-                </button>
+                <button @click="viewMode = 'minor_list'" class="text-blue-600 text-sm font-bold flex items-center"><i class="fa-solid fa-arrow-left mr-1"></i> 返回子分類</button>
                 <span class="text-xs text-gray-500 font-bold">{{ selectedMinor.name }}</span>
             </div>
             <div class="grid grid-cols-1 gap-2">
-                <div v-for="subsub in selectedMinor.subsubs" :key="subsub.code" 
-                     @click="selectSubMinorCategory(subsub)"
-                     class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-green-50 transition">
-                    <div class="flex items-center">
-                        <span class="text-gray-800 font-medium">{{ subsub.name }}</span>
-                    </div>
+                <div v-for="subsub in selectedMinor.subsubs" :key="subsub.code" @click="selectSubMinorCategory(subsub)" class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-green-50 transition">
+                    <div class="flex items-center"><span class="text-gray-800 font-medium">{{ subsub.name }}</span></div>
                     <span class="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full">{{ subsub.count }} 筆</span>
                 </div>
             </div>
         </div>
 
         <div v-if="viewMode === 'result_list'" class="animate-slide-up">
-            
             <div v-if="filterCategory" class="flex items-center justify-between mb-3 px-1 sticky top-0 bg-gray-50 z-10 py-2">
-                <button @click="backToMinorList" class="text-blue-600 text-sm font-bold flex items-center">
-                    <i class="fa-solid fa-arrow-left mr-1"></i> 返回分類列表
-                </button>
+                <button @click="backToMinorList" class="text-blue-600 text-sm font-bold flex items-center"><i class="fa-solid fa-arrow-left mr-1"></i> 返回分類列表</button>
                 <span class="text-xs text-gray-500 font-bold bg-white px-2 py-1 rounded shadow-sm border">{{ currentCategoryName }}</span>
             </div>
             <div v-if="groupedDrugs.length === 0" class="text-center py-20 text-gray-400">
@@ -185,26 +150,15 @@
             </div>
 
             <div v-for="group in groupedDrugs" :key="group.code" class="mb-4">
-                
                 <div v-if="filterCategory" class="relative bg-gray-100 border-l-4 border-blue-500 px-3 py-2 text-sm font-bold text-gray-700 shadow-sm flex items-center mb-2 rounded-r">
                     <span class="bg-gray-600 text-white text-[10px] px-1.5 py-0.5 rounded mr-2 font-mono">{{ group.code }}</span>
                     <span>{{ group.name }}</span>
                 </div>
-                <div v-else class="px-2 mb-2 text-gray-500 text-xs font-bold">
-                    {{ group.name }}
-                </div>
+                <div v-else class="px-2 mb-2 text-gray-500 text-xs font-bold">{{ group.name }}</div>
 
-               <div 
-                    v-for="drug in group.drugs" 
-                    :key="drug.code" 
-                    @click="openDetail(drug)"
-                    class="bg-white rounded-xl p-3 mb-3 card-shadow border border-gray-100 active:bg-blue-50 transition-colors cursor-pointer relative overflow-hidden"
-                    :class="{'opacity-60': drug.isDiscontinued}"
-                >
+               <div v-for="drug in group.drugs" :key="drug.code" @click="openDetail(drug)" class="bg-white rounded-xl p-3 mb-3 card-shadow border border-gray-100 active:bg-blue-50 transition-colors cursor-pointer relative overflow-hidden" :class="{'opacity-60': drug.isDiscontinued}">
                     <div v-if="drug.atcSubSub" class="absolute top-0 left-0 z-10">
-                        <span class="bg-blue-50 text-blue-600 text-[10px] px-2 py-0.5 font-bold rounded-br-lg shadow-sm border-r border-b border-blue-100">
-                            {{ drug.atcSubSub }}
-                        </span>
+                        <span class="bg-blue-50 text-blue-600 text-[10px] px-2 py-0.5 font-bold rounded-br-lg shadow-sm border-r border-b border-blue-100">{{ drug.atcSubSub }}</span>
                     </div>
 
                     <div class="absolute top-0 right-0 flex z-10">
@@ -220,9 +174,7 @@
                             <i v-else class="fa-solid fa-pills text-gray-300 text-2xl"></i>
                         </div>
                         <div class="flex-1 min-w-0">
-                            <h3 class="font-bold text-base leading-tight mb-1 truncate pr-2" :class="drug.isDiscontinued ? 'text-gray-500 line-through' : 'text-blue-800'">
-                                {{ drug.tradeName }}
-                            </h3>
+                            <h3 class="font-bold text-base leading-tight mb-1 truncate pr-2" :class="drug.isDiscontinued ? 'text-gray-500 line-through' : 'text-blue-800'">{{ drug.tradeName }}</h3>
                             <p class="text-gray-500 text-xs font-mono mb-1 truncate">{{ drug.genericName }}</p>
                             <p class="text-gray-800 text-xs line-clamp-2 bg-gray-50 p-1 rounded">{{ drug.indication }}</p>
                         </div>
@@ -234,54 +186,31 @@
 
     <div v-if="selectedDrug" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-0 sm:p-4" @click.self="closeDetail">
         <div class="bg-white w-full max-w-md h-[90vh] sm:h-[85vh] rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden shadow-2xl animate-slide-up">
-            
             <div class="flex justify-between items-start p-3 border-b bg-gray-50">
                 <div class="flex-1 pr-2 min-w-0">
                     <div v-if="selectedDrug.isHighAlert" class="mb-1">
-                         <span class="bg-red-500 text-white text-[10px] px-2 py-0.5 font-bold rounded shadow-sm inline-flex items-center">
-                            <i class="fa-solid fa-triangle-exclamation mr-1"></i> 高警訊藥品
-                        </span>
+                         <span class="bg-red-500 text-white text-[10px] px-2 py-0.5 font-bold rounded shadow-sm inline-flex items-center"><i class="fa-solid fa-triangle-exclamation mr-1"></i> 高警訊藥品</span>
                     </div>
-                    <h2 class="font-bold text-lg leading-tight break-words" :class="selectedDrug.isDiscontinued ? 'text-gray-500 line-through' : 'text-gray-800'">
-                        {{ selectedDrug.tradeName }}
-                    </h2>
+                    <h2 class="font-bold text-lg leading-tight break-words" :class="selectedDrug.isDiscontinued ? 'text-gray-500 line-through' : 'text-gray-800'">{{ selectedDrug.tradeName }}</h2>
                 </div>
-                <button @click="closeDetail" class="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 transition flex-shrink-0 mt-1">
-                    <i class="fa-solid fa-times"></i>
-                </button>
+                <button @click="closeDetail" class="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 transition flex-shrink-0 mt-1"><i class="fa-solid fa-times"></i></button>
             </div>
 
             <div class="flex-1 overflow-y-auto p-4 space-y-5">
-                <div v-if="selectedDrug.isDiscontinued" class="bg-gray-100 border-l-4 border-gray-500 p-3 rounded text-gray-700 text-sm font-bold flex items-center">
-                    <i class="fa-solid fa-ban mr-2"></i> 此藥品已停用
-                </div>
-                <div v-else-if="selectedDrug.isOutOfStock" class="bg-orange-50 border-l-4 border-orange-500 p-3 rounded text-orange-700 text-sm font-bold flex items-center">
-                    <i class="fa-solid fa-box-open mr-2"></i> 此藥品目前缺貨中
-                </div>
+                <div v-if="selectedDrug.isDiscontinued" class="bg-gray-100 border-l-4 border-gray-500 p-3 rounded text-gray-700 text-sm font-bold flex items-center"><i class="fa-solid fa-ban mr-2"></i> 此藥品已停用</div>
+                <div v-else-if="selectedDrug.isOutOfStock" class="bg-orange-50 border-l-4 border-orange-500 p-3 rounded text-orange-700 text-sm font-bold flex items-center"><i class="fa-solid fa-box-open mr-2"></i> 此藥品目前缺貨中</div>
 
                 <div class="w-full bg-white rounded-xl border flex items-center justify-center overflow-hidden relative shadow-sm min-h-[150px]">
                     <img v-if="selectedDrug.imgUrl" :src="selectedDrug.imgUrl" class="max-h-64 object-contain" @error="imageLoadError">
-                    <div v-else class="text-gray-400 py-10 flex flex-col items-center">
-                        <i class="fa-solid fa-image text-4xl mb-2"></i>
-                        <span>無圖片資料</span>
-                    </div>
+                    <div v-else class="text-gray-400 py-10 flex flex-col items-center"><i class="fa-solid fa-image text-4xl mb-2"></i><span>無圖片資料</span></div>
                 </div>
 
                 <section v-if="selectedDrug.atcCode" class="bg-indigo-50 rounded-xl p-3 border border-indigo-100">
                     <h3 class="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-2">藥理分類</h3>
                     <div class="space-y-2">
-                        <div v-if="selectedDrug.atcMain" class="flex items-center gap-2 p-1">
-                            <span class="bg-indigo-200 text-indigo-800 text-xs px-2 py-0.5 rounded-full font-bold">主分類</span>
-                            <span class="text-sm font-bold text-indigo-900">{{ selectedDrug.atcMain }}</span>
-                        </div>
-                        <div v-if="selectedDrug.atcSub" class="flex items-center gap-2 ml-2 border-l-2 border-indigo-200 pl-2 p-1">
-                            <span class="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full font-bold">子分類</span>
-                            <span class="text-sm text-indigo-800">{{ selectedDrug.atcSub }}</span>
-                        </div>
-                        <div v-if="selectedDrug.atcSubSub" class="flex items-center gap-2 ml-4 border-l-2 border-green-200 pl-2 p-1">
-                            <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-bold">細分類</span>
-                            <span class="text-sm text-green-800">{{ selectedDrug.atcSubSub }}</span>
-                        </div>
+                        <div v-if="selectedDrug.atcMain" class="flex items-center gap-2 p-1"><span class="bg-indigo-200 text-indigo-800 text-xs px-2 py-0.5 rounded-full font-bold">主分類</span><span class="text-sm font-bold text-indigo-900">{{ selectedDrug.atcMain }}</span></div>
+                        <div v-if="selectedDrug.atcSub" class="flex items-center gap-2 ml-2 border-l-2 border-indigo-200 pl-2 p-1"><span class="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full font-bold">子分類</span><span class="text-sm text-indigo-800">{{ selectedDrug.atcSub }}</span></div>
+                        <div v-if="selectedDrug.atcSubSub" class="flex items-center gap-2 ml-4 border-l-2 border-green-200 pl-2 p-1"><span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-bold">細分類</span><span class="text-sm text-green-800">{{ selectedDrug.atcSubSub }}</span></div>
                     </div>
                 </section>
 
@@ -289,47 +218,27 @@
                     <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-2 border-b pb-1">基本資料</h3>
                     <div class="grid grid-cols-1 gap-3">
                         <div><span class="text-xs text-gray-500 block">學名</span><span class="text-gray-900 font-medium select-all">{{ selectedDrug.genericName }}</span></div>
-                        
                         <div class="grid grid-cols-2 gap-2">
-                             
                              <div>
-                                <span class="text-xs text-gray-500 block">院內代碼</span>
-                                <span class="text-gray-900 select-all">{{ selectedDrug.code }}</span>
-                                
+                                <span class="text-xs text-gray-500 block">院內代碼</span><span class="text-gray-900 select-all">{{ selectedDrug.code }}</span>
                                 <div v-if="(selectedDrug.isDiscontinued || selectedDrug.isOutOfStock) && (selectedDrug.sub1 || selectedDrug.sub2)" class="mt-2">
-                                    <span class="text-[10px] text-red-500 font-bold block mb-1">
-                                        <i class="fa-solid fa-arrow-right-arrow-left mr-1"></i> 建議替代品項
-                                    </span>
+                                    <span class="text-[10px] text-red-500 font-bold block mb-1"><i class="fa-solid fa-arrow-right-arrow-left mr-1"></i> 建議替代品項</span>
                                     <div class="flex flex-wrap gap-1">
-                                        <button v-if="selectedDrug.sub1" @click="openSubstitute(selectedDrug.sub1)" class="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs px-2 py-1 rounded transition flex items-center">
-                                            {{ selectedDrug.sub1 }} <i class="fa-solid fa-external-link-alt ml-1 text-[10px]"></i>
-                                        </button>
-                                        <button v-if="selectedDrug.sub2" @click="openSubstitute(selectedDrug.sub2)" class="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs px-2 py-1 rounded transition flex items-center">
-                                            {{ selectedDrug.sub2 }} <i class="fa-solid fa-external-link-alt ml-1 text-[10px]"></i>
-                                        </button>
+                                        <button v-if="selectedDrug.sub1" @click="openSubstitute(selectedDrug.sub1)" class="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs px-2 py-1 rounded transition flex items-center">{{ selectedDrug.sub1 }} <i class="fa-solid fa-external-link-alt ml-1 text-[10px]"></i></button>
+                                        <button v-if="selectedDrug.sub2" @click="openSubstitute(selectedDrug.sub2)" class="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs px-2 py-1 rounded transition flex items-center">{{ selectedDrug.sub2 }} <i class="fa-solid fa-external-link-alt ml-1 text-[10px]"></i></button>
                                     </div>
                                 </div>
                              </div>
-
                              <div>
                                 <div class="mb-2">
                                     <span class="text-xs text-gray-500 block">健保碼 (點擊查價)</span>
-                                    <a v-if="selectedDrug.nhiCode && selectedDrug.nhiCode !== '-'" href="#" @click.prevent="searchNhiPrice(selectedDrug.nhiCode)" class="text-blue-600 font-bold hover:text-blue-800 underline flex items-center select-all">
-                                        {{ selectedDrug.nhiCode }}<i class="fa-solid fa-magnifying-glass-dollar ml-1 text-xs"></i>
-                                    </a>
+                                    <a v-if="selectedDrug.nhiCode && selectedDrug.nhiCode !== '-'" href="#" @click.prevent="searchNhiPrice(selectedDrug.nhiCode)" class="text-blue-600 font-bold hover:text-blue-800 underline flex items-center select-all">{{ selectedDrug.nhiCode }}<i class="fa-solid fa-magnifying-glass-dollar ml-1 text-xs"></i></a>
                                     <span v-else class="text-gray-900">-</span>
                                 </div>
-                                
-                                <div v-if="selectedDrug.selfPayPrice">
-                                    <span class="text-xs text-gray-500 block">自費價</span>
-                                    <span class="text-red-600 font-bold font-mono text-base">
-                                        {{ selectedDrug.selfPayPrice }}
-                                    </span>
-                                </div>
+                                <div v-if="selectedDrug.selfPayPrice"><span class="text-xs text-gray-500 block">自費價</span><span class="text-red-600 font-bold font-mono text-base">{{ selectedDrug.selfPayPrice }}</span></div>
                             </div>
-                            </div>
-                        
                         </div>
+                    </div>
                 </section>
                 
                 <section>
@@ -351,14 +260,11 @@
             </div>
             
             <div class="p-3 border-t bg-gray-50 flex gap-2">
-                <a v-if="selectedDrug.leafletLink" :href="selectedDrug.leafletLink" target="_blank" class="flex-1 bg-white border border-gray-300 text-gray-700 py-2.5 rounded-lg text-center font-bold text-sm shadow-sm flex items-center justify-center">
-                    <i class="fa-solid fa-file-pdf mr-2 text-red-500"></i> 仿單
-                </a>
+                <a v-if="selectedDrug.leafletLink" :href="selectedDrug.leafletLink" target="_blank" class="flex-1 bg-white border border-gray-300 text-gray-700 py-2.5 rounded-lg text-center font-bold text-sm shadow-sm flex items-center justify-center"><i class="fa-solid fa-file-pdf mr-2 text-red-500"></i> 仿單</a>
                 <button @click="closeDetail" class="flex-1 bg-blue-600 text-white py-2.5 rounded-lg text-center font-bold text-sm shadow-md active:bg-blue-700">確定</button>
             </div>
         </div>
     </div>
-
 </div>
 
 <script>
@@ -370,7 +276,7 @@
     const CLOUDINARY_CLOUD_NAME = 'de02nbokt'; 
     // ======================================
 
-    // *** 完整 ATC 字典 (維持原本內容，此處省略以節省版面，請保留原本的 ATC_DICT) ***
+    // *** 完整 ATC 字典 (包含新增的 D08, D09, D11) ***
     const ATC_DICT = {
         'A': '消化道及代謝', 'A01': '口腔病用藥', 'A01A': '口腔病用藥', 'A01AA': '預防齲齒藥', 'A01AB': '局部口腔治療用抗感染藥及防腐劑', 'A01AC': '局部口腔治療用皮質類固醇', 'A01AD': '其他局部口腔治療用藥',
         'A02': '胃酸相關疾病治療藥', 'A02A': '制酸劑', 'A02AA': '鎂化合物', 'A02AB': '鋁化合物', 'A02AC': '鈣化合物', 'A02AD': '鋁、鈣、鎂化合物之複方', 'A02AF': '制酸劑與消脹氣藥之複方', 'A02AH': '配有碳酸氫鈉的抗酸藥', 'A02AX': '其他制酸劑複方',
@@ -410,6 +316,7 @@
         'C09': '作用於腎素-血管張力素系統之藥物', 'C09A': 'ACE 抑制劑，單方', 'C09AA': 'ACE 抑制劑，單方', 'C09B': 'ACE 抑制劑，複方', 'C09BA': 'ACE 抑制劑與利尿劑之複方', 'C09BB': 'ACE 抑制劑與鈣離子通道阻斷劑之複方', 'C09C': '血管張力素II受體拮抗劑，單方', 'C09CA': '血管張力素II受體拮抗劑，單方', 'C09D': '血管張力素II受體拮抗劑，複方', 'C09DA': '血管張力素II受體拮抗劑與利尿劑之複方', 'C09DB': '血管張力素II受體拮抗劑與鈣離子通道阻斷劑之複方',
         'C10': '脂質調節劑', 'C10A': '脂質調節劑，單方', 'C10AA': 'HMG CoA 還原酶抑制劑', 'C10AB': 'Fibrates 類', 'C10AC': '膽酸結合劑', 'C10AD': '菸鹼酸及其衍生物', 'C10AX': '其他脂質調節劑', 'C10B': '脂質調節劑，複方', 'C10BA': 'HMG CoA 還原酶抑制劑與其他脂質調節劑之複方',
         
+        // === 修改：完整皮膚科用藥分類 ===
         'D': '皮膚科用藥', 'D01': '皮膚病用抗黴菌藥', 'D01A': '局部用抗黴菌藥', 'D01AC': 'Imidazole 及 Triazole 衍生物', 'D01AE': '其他局部用抗黴菌藥', 'D01B': '全身用抗黴菌藥', 'D01BA': '全身用抗黴菌藥',
         'D02': '潤膚劑及保護劑', 'D02A': '潤膚劑及保護劑', 'D02AA': '矽酮類製品', 'D02AE': '尿素製品',
         'D03': '創傷及潰瘍治療劑', 'D03A': '疤痕治療劑', 'D03AX': '其他疤痕治療劑',
@@ -421,6 +328,7 @@
         'D09': '含藥敷料', 'D09A': '含藥敷料', 'D09AA': '含抗感染藥之敷料', 'D09AB': '鋅繃帶', 'D09AX': '軟石蠟敷料',
         'D10': '抗痤瘡製劑', 'D10A': '局部用抗痤瘡製劑', 'D10AD': '維生素A酸及其類似物', 'D10B': '全身用抗痤瘡製劑', 'D10BA': '維生素A酸',
         'D11': '其他皮膚科製劑', 'D11A': '其他皮膚科製劑', 'D11AA': '抗汗劑', 'D11AC': '藥用洗髮精', 'D11AE': '雄性激素，局部用', 'D11AF': '疣治療藥及去角質劑', 'D11AH': '異位性皮膚炎治療藥', 'D11AX': '其他皮膚科製劑',
+        // ============================
         
         'G': '泌尿生殖系統及性激素', 'G01': '婦科抗感染藥及防腐劑', 'G01A': '婦科抗感染藥及防腐劑，不含皮質類固醇', 'G01AA': '抗生素', 'G01AB': '砷化合物', 'G01AC': '喹啉衍生物', 'G01AD': '有機酸', 'G01AE': '磺胺類', 'G01AF': 'Imidazole 衍生物', 'G01AG': '三唑類衍生物', 'G01AX': '其他抗感染藥及防腐劑', 'G01B': '婦科抗感染藥及防腐劑，與皮質類固醇之複方',
         'G02': '其他婦科用藥', 'G02A': '子宮收縮劑', 'G02AB': '麥角生物鹼', 'G02AC': '麥角生物鹼與催產素', 'G02AD': '前列腺素', 'G02B': '陰道用避孕藥', 'G02C': '其他婦科用藥', 'G02CA': '擬交感神經劑，抑制分娩用', 'G02CB': '泌乳素抑制劑',
@@ -487,7 +395,6 @@
             const loading = ref(true);
             const error = ref('');
             
-            // 視圖狀態 (移除 'sub_minor_list')
             const viewMode = ref('home'); 
             const filterCategory = ref(''); 
             const currentCategoryName = ref('');
@@ -495,6 +402,23 @@
             const atcGroups = ref([]); 
             const selectedMajor = ref(null); 
             const selectedMinor = ref(null);
+
+            // === Fuse.js 設定 (模糊搜尋) ===
+            let fuse = null;
+            const fuseOptions = {
+                keys: [
+                    { name: 'code', weight: 0.3 },        // 院內代碼
+                    { name: 'tradeName', weight: 0.3 },   // 商品名
+                    { name: 'genericName', weight: 0.3 }, // 學名
+                    { name: 'nhiCode', weight: 0.2 },     // 健保碼
+                    { name: 'atcCode', weight: 0.1 },     // ATC碼
+                    { name: 'indication', weight: 0.1 }   // 適應症
+                ],
+                threshold: 0.3,       // 容錯率
+                ignoreLocation: true,
+                useExtendedSearch: true
+            };
+            // =============================
 
             const fetchCsv = (url) => new Promise((resolve, reject) => {
                 Papa.parse(url, { download: true, header: true, skipEmptyLines: true, complete: (r) => resolve(r.data), error: (e) => reject(e) });
@@ -510,10 +434,8 @@
                                 atcMap[row['藥品代碼'].trim()] = {
                                     atc: row['ATC碼'] ? row['ATC碼'].trim().toUpperCase() : '',
                                     price: row['自費價'] ? row['自費價'].trim() : '',
-                                    // === 新增：讀取替代藥品代碼 ===
                                     sub1: row['替代院內代碼1'] ? row['替代院內代碼1'].trim() : '',
                                     sub2: row['替代院內代碼2'] ? row['替代院內代碼2'].trim() : ''
-                                    // ==========================
                                 };
                             }
                         });
@@ -537,25 +459,21 @@
                     const mapData = atcMap[code] || { atc: '', price: '', sub1: '', sub2: '' };
                     const atc = mapData.atc;
                     const selfPayPrice = mapData.price;
-                    // === 取得替代代碼 ===
                     const sub1 = mapData.sub1;
                     const sub2 = mapData.sub2;
 
-                    // === 修改區塊開始：健保碼與自費判斷 ===
+                    // === 健保碼與自費判斷 ===
                     const rawNhi = row['健保碼'] ? row['健保碼'].trim() : '';
                     const nhiCode = rawNhi || '-';
-                    // 如果健保碼是 '-' 或空值，則視為自費
                     const isSelfPay = (nhiCode === '-');
-                    // === 修改區塊結束 ===
+                    // ========================
 
                     const imgName = row['圖檔名稱'] ? row['圖檔名稱'].trim() : '';
-                    
                     const status1 = row['門診停用否'] ? row['門診停用否'].trim().toUpperCase() : '';
                     const status2 = row['住院停用否'] ? row['住院停用否'].trim().toUpperCase() : '';
                     let isDiscontinued = (status1 === 'Y' || status2 === 'Y') && !(status1 === 'N' || status2 === 'N');
                     let isOutOfStock = (status1 === 'C' || status2 === 'C') && !isDiscontinued;
 
-                    // ... (中間省略 ATC 解析部分，保持原樣) ...
                     let atcMain = '', atcSub = '', atcGroup = '', atcSubSub = '';
                     if (atc.length >= 1) { const c1 = atc.substring(0, 1); atcMain = ATC_DICT[c1] || `分類 ${c1}`; }
                     if (atc.length >= 3) { const c3 = atc.substring(0, 3); atcSub = ATC_DICT[c3] || c3; }
@@ -563,10 +481,7 @@
                     if (atc.length >= 5) { const c5 = atc.substring(0, 5); atcSubSub = ATC_DICT[c5] || c5; }
 
                     return {
-                        code, nhiCode: row['健保碼']||'-', isSelfPay, selfPayPrice,
-                        // === 新增替代藥品欄位 ===
-                        sub1, sub2,
-                        // ======================
+                        code, nhiCode, isSelfPay, selfPayPrice, sub1, sub2,
                         genericName: row['學名']||'', tradeName: row['商品名(英文)']||row['商品名']||'無商品名',
                         indication: row['適應症']||row['臨床用途']||'', dosage: row['用量用法']||'', sideEffect: row['副作用']||'',
                         patientNote: row['民眾注意事項']||row['警語']||'', renalNote: row['劑量調整']||'', components: row['藥品成分']||'',
@@ -579,31 +494,34 @@
                 }).filter(d => d !== null);
 
                 drugs.value = processed;
+                
+                // === 初始化 Fuzzy Search ===
+                fuse = new Fuse(processed, fuseOptions);
+                // =========================
+
                 buildAtcTree(processed);
             };
 
             const buildAtcTree = (data) => {
                 const groups = {}; 
                 data.forEach(d => {
-                    // Level 1 (Major)
                     if (d.atcMainCode && d.atcMain) {
                         if (!groups[d.atcMainCode]) {
                             groups[d.atcMainCode] = { code: d.atcMainCode, name: d.atcMain, subs: {} };
                         }
                         
-                        // Level 3 (Minor)
                         if (d.atcSubCode && d.atcSub) {
                             if (!groups[d.atcMainCode].subs[d.atcSubCode]) {
                                 groups[d.atcMainCode].subs[d.atcSubCode] = { 
                                     code: d.atcSubCode, 
                                     name: d.atcSub, 
                                     count: 0,
-                                    subsubs: {} // 初始化第 4 層容器
+                                    subsubs: {} 
                                 };
                             }
                             groups[d.atcMainCode].subs[d.atcSubCode].count++;
 
-                            // Level 4 (Sub-Minor) - 為了 J01 和 L01 預備資料
+                            // === 為了 J01 和 L01 收集第三層 (Level 4) 資料 ===
                             if (d.atcGroupCode && d.atcGroup) {
                                 let subNode = groups[d.atcMainCode].subs[d.atcSubCode];
                                 if (!subNode.subsubs[d.atcGroupCode]) {
@@ -615,65 +533,52 @@
                                 }
                                 subNode.subsubs[d.atcGroupCode].count++;
                             }
+                            // ============================================
                         }
                     }
                 });
                 atcGroups.value = Object.values(groups).sort((a,b) => a.code.localeCompare(b.code));
             };
             
-           // === 新增：自動篩選缺貨藥品 ===
             const outOfStockDrugs = computed(() => {
                 return drugs.value
                     .filter(d => d.isOutOfStock)
-                    // 修改：加入 || '' 避免因為資料缺失導致當機
                     .sort((a, b) => (a.tradeName || '').localeCompare(b.tradeName || '')); 
             });
             
            const filteredDrugs = computed(() => {
                 let result = [];
+                // === 使用 Fuzzy Search ===
                 if (keyword.value) {
-                    const k = keyword.value.toLowerCase().trim();
-                    result = drugs.value.filter(d => 
-                        (d.tradeName && d.tradeName.toLowerCase().includes(k)) ||
-                        (d.genericName && d.genericName.toLowerCase().includes(k)) ||
-                        (d.code && d.code.toLowerCase().includes(k)) ||
-                        (d.indication && d.indication.toLowerCase().includes(k)) ||
-                        (d.atcCode && d.atcCode.toLowerCase().includes(k))
-                    );
-                } else if (filterCategory.value) {
+                    const k = keyword.value.trim();
+                    if (fuse) {
+                        const searchResults = fuse.search(k);
+                        result = searchResults.map(res => res.item);
+                    }
+                } 
+                // =======================
+                else if (filterCategory.value) {
                     result = drugs.value.filter(d => d.atcCode.startsWith(filterCategory.value));
                 } else {
                     return [];
                 }
 
-                // 修改：排序原則：ATC 4碼 → ATC 5碼 → 學名 → 狀態(已停用殿後)
                 return result.sort((a, b) => {
-                    // 1. 先比對 ATC 4碼 (確保同類別在一起)
                     if (a.atcGroupCode < b.atcGroupCode) return -1;
                     if (a.atcGroupCode > b.atcGroupCode) return 1;
-
-                    // 2. 再比對 ATC 5碼 (同細分類在一起)
                     if (a.atcSubSubCode < b.atcSubSubCode) return -1;
                     if (a.atcSubSubCode > b.atcSubSubCode) return 1;
-
-                    // 3. 比對學名 (讓同成分的藥品排在一起)
-                    // 使用 toLowerCase() 避免大小寫影響排序
                     const nameA = (a.genericName || '').toLowerCase();
                     const nameB = (b.genericName || '').toLowerCase();
                     if (nameA < nameB) return -1;
                     if (nameA > nameB) return 1;
-
-                    // 4. 新增：比對狀態 (同成分中，已停用的排在最後)
-                    // false (0, 啟用) 會排在 true (1, 停用) 前面
                     if (a.isDiscontinued !== b.isDiscontinued) {
                         return a.isDiscontinued ? 1 : -1;
                     }
-                    
                     return 0;
                 });
             });
 
-            // 分組邏輯更新：使用 ATC 4碼 (Level 3)
             const groupedDrugs = computed(() => {
                 const list = filteredDrugs.value;
                 if (keyword.value) {
@@ -681,14 +586,8 @@
                 }
                 const groups = {};
                 list.forEach(drug => {
-                    // Group by ATC 4-level code
                     let groupCode = drug.atcGroupCode || 'Other';
-                    
-                    // 優先顯示 ATC 4碼中文名稱，若無則顯示 5碼中文，再無則顯示英文或代碼
-                    let groupName = ATC_DICT[groupCode] || 
-                                    ATC_DICT[drug.atcSubSubCode] || 
-                                    groupCode; 
-
+                    let groupName = ATC_DICT[groupCode] || ATC_DICT[drug.atcSubSubCode] || groupCode; 
                     if (!groups[groupCode]) {
                         groups[groupCode] = { code: groupCode, name: groupName, drugs: [] };
                     }
@@ -707,35 +606,28 @@
             };
 
             const selectMinorCategory = (sub) => {
-                // === 修改邏輯：如果是 J01 或 L01，進入第三層選單 ===
+                // === J01, L01 進入第三層 ===
                 if (['J01', 'L01'].includes(sub.code)) {
-                    // 將 subsubs 物件轉為陣列並排序，供畫面 v-for 使用
                     const sortedSubsubs = Object.values(sub.subsubs).sort((a,b) => a.code.localeCompare(b.code));
-                    
                     selectedMinor.value = { ...sub, subsubs: sortedSubsubs };
                     viewMode.value = 'sub_minor_list';
                 } else {
-                    // 其他類別維持原樣，直接看結果
                     filterCategory.value = sub.code;
                     currentCategoryName.value = sub.name;
                     viewMode.value = 'result_list';
                 }
             };
 
-            // === 新增：選擇第三層 (ATC 4碼) 後的動作 ===
             const selectSubMinorCategory = (subsub) => {
                 filterCategory.value = subsub.code;
                 currentCategoryName.value = subsub.name;
                 viewMode.value = 'result_list';
             };
             
-            // 修改：返回分類列表的邏輯
             const backToMinorList = () => {
-                // 如果目前的篩選條件是 4 碼 (例如 J01C)，代表是從第三層進來的，要退回第三層
                 if (filterCategory.value.length === 4) {
                     viewMode.value = 'sub_minor_list';
                 } else {
-                    // 否則退回第二層
                     viewMode.value = 'minor_list';
                 }
                 filterCategory.value = ''; 
@@ -753,10 +645,9 @@
             const openDetail = (drug) => selectedDrug.value = drug;
             const closeDetail = () => selectedDrug.value = null;
             const imageLoadError = (e) => { e.target.style.display = 'none'; }; 
-            // === 新增：點擊替代藥品代碼後，跳轉到該藥品詳情 ===
+            
             const openSubstitute = (subCode) => {
                 if (!subCode) return;
-                // 在現有的 drugs 陣列中尋找代碼相符的藥品
                 const targetDrug = drugs.value.find(d => d.code === subCode);
                 if (targetDrug) {
                     selectedDrug.value = targetDrug;
@@ -769,27 +660,13 @@
 
             return {
                 keyword, filteredDrugs, groupedDrugs, selectedDrug, loading, error, 
-                viewMode, atcGroups, selectedMajor, filterCategory, currentCategoryName,
-                onSearchInput, selectMajorCategory, selectMinorCategory, resetToHome,
+                viewMode, atcGroups, selectedMajor, selectedMinor, filterCategory, currentCategoryName,
+                onSearchInput, selectMajorCategory, selectMinorCategory, selectSubMinorCategory, resetToHome,
                 openDetail, closeDetail, imageLoadError, searchNhiPrice,
-                backToMinorList, outOfStockDrugs, openSubstitute, selectedMinor, selectSubMinorCategory // 記得導出此函式
+                backToMinorList, outOfStockDrugs, openSubstitute
             };
         }
     }).mount('#app');
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
