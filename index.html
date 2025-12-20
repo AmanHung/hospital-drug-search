@@ -492,6 +492,7 @@
             
             const atcGroups = ref([]); 
             const selectedMajor = ref(null); 
+            const selectedMinor = ref(null);
 
             const fetchCsv = (url) => new Promise((resolve, reject) => {
                 Papa.parse(url, { download: true, header: true, skipEmptyLines: true, complete: (r) => resolve(r.data), error: (e) => reject(e) });
@@ -576,17 +577,36 @@
             const buildAtcTree = (data) => {
                 const groups = {}; 
                 data.forEach(d => {
+                    // Level 1 (Major)
                     if (d.atcMainCode && d.atcMain) {
                         if (!groups[d.atcMainCode]) {
                             groups[d.atcMainCode] = { code: d.atcMainCode, name: d.atcMain, subs: {} };
                         }
+                        
+                        // Level 3 (Minor)
                         if (d.atcSubCode && d.atcSub) {
                             if (!groups[d.atcMainCode].subs[d.atcSubCode]) {
                                 groups[d.atcMainCode].subs[d.atcSubCode] = { 
-                                    code: d.atcSubCode, name: d.atcSub, count: 0 
+                                    code: d.atcSubCode, 
+                                    name: d.atcSub, 
+                                    count: 0,
+                                    subsubs: {} // 初始化第 4 層容器
                                 };
                             }
                             groups[d.atcMainCode].subs[d.atcSubCode].count++;
+
+                            // Level 4 (Sub-Minor) - 為了 J01 和 L01 預備資料
+                            if (d.atcGroupCode && d.atcGroup) {
+                                let subNode = groups[d.atcMainCode].subs[d.atcSubCode];
+                                if (!subNode.subsubs[d.atcGroupCode]) {
+                                    subNode.subsubs[d.atcGroupCode] = {
+                                        code: d.atcGroupCode,
+                                        name: d.atcGroup,
+                                        count: 0
+                                    };
+                                }
+                                subNode.subsubs[d.atcGroupCode].count++;
+                            }
                         }
                     }
                 });
@@ -679,17 +699,39 @@
             };
 
             const selectMinorCategory = (sub) => {
-                // 直接進入結果列表 (不顯示第三層)
-                filterCategory.value = sub.code;
-                currentCategoryName.value = sub.name;
+                // === 修改邏輯：如果是 J01 或 L01，進入第三層選單 ===
+                if (['J01', 'L01'].includes(sub.code)) {
+                    // 將 subsubs 物件轉為陣列並排序，供畫面 v-for 使用
+                    const sortedSubsubs = Object.values(sub.subsubs).sort((a,b) => a.code.localeCompare(b.code));
+                    
+                    selectedMinor.value = { ...sub, subsubs: sortedSubsubs };
+                    viewMode.value = 'sub_minor_list';
+                } else {
+                    // 其他類別維持原樣，直接看結果
+                    filterCategory.value = sub.code;
+                    currentCategoryName.value = sub.name;
+                    viewMode.value = 'result_list';
+                }
+            };
+
+            // === 新增：選擇第三層 (ATC 4碼) 後的動作 ===
+            const selectSubMinorCategory = (subsub) => {
+                filterCategory.value = subsub.code;
+                currentCategoryName.value = subsub.name;
                 viewMode.value = 'result_list';
             };
             
-            // 新增：返回次分類列表
+            // 修改：返回分類列表的邏輯
             const backToMinorList = () => {
+                // 如果目前的篩選條件是 4 碼 (例如 J01C)，代表是從第三層進來的，要退回第三層
+                if (filterCategory.value.length === 4) {
+                    viewMode.value = 'sub_minor_list';
+                } else {
+                    // 否則退回第二層
+                    viewMode.value = 'minor_list';
+                }
                 filterCategory.value = ''; 
                 currentCategoryName.value = '';
-                viewMode.value = 'minor_list';
             };
 
             const resetToHome = () => { keyword.value = ''; filterCategory.value = ''; viewMode.value = 'home'; };
@@ -722,13 +764,14 @@
                 viewMode, atcGroups, selectedMajor, filterCategory, currentCategoryName,
                 onSearchInput, selectMajorCategory, selectMinorCategory, resetToHome,
                 openDetail, closeDetail, imageLoadError, searchNhiPrice,
-                backToMinorList, outOfStockDrugs, openSubstitute // 記得導出此函式
+                backToMinorList, outOfStockDrugs, openSubstitute, selectedMinor, selectSubMinorCategory // 記得導出此函式
             };
         }
     }).mount('#app');
 </script>
 </body>
 </html>
+
 
 
 
