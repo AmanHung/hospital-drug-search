@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>院內電子處方集 v6.1 (雲端字典版)</title>
+    <title>院內電子處方集 v6.2 (雲端字典版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
@@ -274,7 +274,7 @@
     // ============== 資料來源 ==============
     const DRUG_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTl_HoBeP0qBD79IB7Ulp_xAMRX4Gyx65pgU-4Kf15Lu4g4FqGdVBDSn1BEI6sNXht889zjRx6RErb-/pub?output=csv';
     const ATC_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSMhr-Ocv4uEN6virOvzsEY-c1-tCEs-e1lB-fvB9d2U2XCtcDaHnLnob_Vu6Ktjce4YErY9y6FuaxD/pub?output=csv';
-    // 新增：ATC 字典檔 URL
+    // 新增：ATC 字典檔 URL (雲端載入)
     const ATC_DICT_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTFu4K84SNNwPkybX9AD49PxAsj5VLa_cO4lmZNAZdK0BFY7qTL0wlFoDKvrcVmBmbcqYiTzvs9wrDj/pub?output=csv';
     const CLOUDINARY_CLOUD_NAME = 'de02nbokt'; 
     // ======================================
@@ -318,7 +318,7 @@
 
             const fetchAllData = () => {
                 loading.value = true;
-                // 修改：同時載入 3 份 CSV
+                // 修改：同時載入 3 份 CSV (藥品, 屬性, ATC字典)
                 Promise.all([fetchCsv(DRUG_DATA_URL), fetchCsv(ATC_DATA_URL), fetchCsv(ATC_DICT_URL)])
                     .then(([drugData, atcData, atcDictData]) => {
                         
@@ -343,7 +343,7 @@
                             }
                         });
 
-                        // 3. 整合主資料
+                        // 3. 整合主資料 (傳入字典)
                         processData(drugData, atcMap, atcDictionary);
                         loading.value = false;
                     })
@@ -494,7 +494,6 @@
                 const groups = {};
                 list.forEach(drug => {
                     let groupCode = drug.atcGroupCode || 'Other';
-                    // 這裡的 ATC_DICT 已移除，改用 drug 物件上已處理好的名稱
                     let groupName = drug.atcGroup || drug.atcSubSub || groupCode; 
                     if (!groups[groupCode]) {
                         groups[groupCode] = { code: groupCode, name: groupName, drugs: [] };
@@ -514,7 +513,6 @@
             };
 
             const selectMinorCategory = (sub) => {
-                // === J01, L01 進入第三層 ===
                 if (['J01', 'L01'].includes(sub.code)) {
                     const sortedSubsubs = Object.values(sub.subsubs).sort((a,b) => a.code.localeCompare(b.code));
                     selectedMinor.value = { ...sub, subsubs: sortedSubsubs };
