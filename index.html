@@ -67,6 +67,7 @@
         <div v-if="loading" class="text-center py-20 text-gray-500">
             <div class="loader"></div>
             <p>正在同步資料庫...</p>
+            <p class="text-xs mt-2 text-gray-400">載入 ATC 字典中...</p>
         </div>
 
         <div v-if="!loading && viewMode === 'home' && !keyword" class="py-4">
@@ -271,9 +272,8 @@
     const DRUG_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTl_HoBeP0qBD79IB7Ulp_xAMRX4Gyx65pgU-4Kf15Lu4g4FqGdVBDSn1BEI6sNXht889zjRx6RErb-/pub?output=csv';
     const ATC_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSMhr-Ocv4uEN6virOvzsEY-c1-tCEs-e1lB-fvB9d2U2XCtcDaHnLnob_Vu6Ktjce4YErY9y6FuaxD/pub?output=csv';
     
-    // === 新增：ATC 字典的外部連結 (請確保有欄位: code, name) ===
+    // ATC 字典外部連結
     const ATC_DICT_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTFu4K84SNNwPkybX9AD49PxAsj5VLa_cO4lmZNAZdK0BFY7qTL0wlFoDKvrcVmBmbcqYiTzvs9wrDj/pub?output=csv';
-    // ========================================================
     
     const CLOUDINARY_CLOUD_NAME = 'de02nbokt'; 
 
@@ -313,15 +313,15 @@
                 Papa.parse(url, { download: true, header: true, skipEmptyLines: true, complete: (r) => resolve(r.data), error: (e) => reject(e) });
             });
 
-            // === 修改：多抓一個 ATC_DICT_URL ===
             const fetchAllData = () => {
                 loading.value = true;
                 Promise.all([
                     fetchCsv(DRUG_DATA_URL), 
                     fetchCsv(ATC_DATA_URL),
-                    fetchCsv(ATC_DICT_URL) // 新增這行
+                    fetchCsv(ATC_DICT_URL)
                 ])
                 .then(([drugData, atcData, atcDictData]) => {
+                    // 1. 處理藥品主檔
                     const atcMap = {};
                     atcData.forEach(row => {
                         if(row['藥品代碼']) {
@@ -334,20 +334,42 @@
                         }
                     });
 
-                    // === 新增：解析遠端 ATC 字典 ===
-                    // 為了方便查詢，轉成 { 'A01': '中文名稱', ... } 的格式
+                    // 2. 處理 ATC 字典 (自動判斷欄位)
                     const dictionary = {};
-                    atcDictData.forEach(row => {
-                        // 支援兩種常見寫法: code/name 或 ATC代碼/中文名稱
-                        const code = row['code'] || row['ATC代碼'] || row['Code'];
-                        const name = row['name'] || row['中文名稱'] || row['Name'];
-                        if(code && name) {
-                            dictionary[code.trim()] = name.trim();
-                        }
-                    });
-                    // ==============================
+                    if (atcDictData && atcDictData.length > 0) {
+                        // 取得第一列的所有欄位名稱 (Header)
+                        const headers = Object.keys(atcDictData[0]);
+                        console.log('偵測到的 ATC 字典欄位:', headers);
 
-                    processData(drugData, atcMap, dictionary); // 傳入 dictionary
+                        // 聰明尋找欄位 (不分大小寫、去空白)
+                        const codeKey = headers.find(h => /code|代碼|atc/i.test(h));
+                        const nameKey = headers.find(h => /name|名稱|中文|chinese/i.test(h));
+
+                        if (codeKey && nameKey) {
+                            atcDictData.forEach(row => {
+                                const code = row[codeKey];
+                                const name = row[nameKey];
+                                if(code && name) {
+                                    dictionary[code.trim()] = name.trim();
+                                }
+                            });
+                        } else {
+                            console.warn('無法自動對應 ATC 字典的欄位，請檢查 Google Sheet 標題。');
+                            // Fallback: 如果真的找不到，試著硬抓 'code' 和 'name'
+                            atcDictData.forEach(row => {
+                                const c = row['code'] || row['Code'] || row['ATC代碼'];
+                                const n = row['name'] || row['Name'] || row['中文名稱'];
+                                if(c && n) dictionary[c.trim()] = n.trim();
+                            });
+                        }
+                    }
+
+                    // 檢查字典內容，如果 'A' 沒有抓到，可能是 Google Sheet 裡缺少了分類資料
+                    if (!dictionary['A'] && !dictionary['A01']) {
+                        console.warn('字典中缺少 A, A01 等分類資料，請確認 Sheet 中是否有這些列。');
+                    }
+
+                    processData(drugData, atcMap, dictionary);
                     loading.value = false;
                 })
                 .catch(err => {
@@ -357,11 +379,8 @@
                 });
             };
 
-            // === 修改：接收 externalAtcDict 參數 ===
-            const processData = (rawData, atcMap, externalAtcDict) => {
-                
-                // 為了相容，若外部字典沒載入成功，這裡可以放一個空物件或預設值
-                const dict = externalAtcDict || {};
+            const processData = (rawData, atcMap, dict) => {
+                dict = dict || {};
 
                 let processed = rawData.map(row => {
                     const code = row['藥品代碼'] ? row['藥品代碼'].trim() : '';
@@ -386,13 +405,11 @@
                     let isDiscontinued = (status1 === 'Y' || status2 === 'Y') && !(status1 === 'N' || status2 === 'N');
                     let isOutOfStock = (status1 === 'C' || status2 === 'C') && !isDiscontinued;
 
-                    // === 使用 externalAtcDict 來查中文名稱 ===
                     let atcMain = '', atcSub = '', atcGroup = '', atcSubSub = '';
                     if (atc.length >= 1) { const c1 = atc.substring(0, 1); atcMain = dict[c1] || `分類 ${c1}`; }
                     if (atc.length >= 3) { const c3 = atc.substring(0, 3); atcSub = dict[c3] || c3; }
                     if (atc.length >= 4) { const c4 = atc.substring(0, 4); atcGroup = dict[c4] || c4; }
                     if (atc.length >= 5) { const c5 = atc.substring(0, 5); atcSubSub = dict[c5] || c5; }
-                    // ========================================
 
                     return {
                         code, nhiCode, isSelfPay, selfPayPrice, sub1, sub2,
@@ -408,9 +425,7 @@
                 }).filter(d => d !== null);
 
                 drugs.value = processed;
-                
                 fuse = new Fuse(processed, fuseOptions);
-
                 buildAtcTree(processed);
             };
 
@@ -450,9 +465,6 @@
                 atcGroups.value = Object.values(groups).sort((a,b) => a.code.localeCompare(b.code));
             };
             
-            // 下方這段稍微修改，讓 ATC_DICT 的讀取改為從每一個藥品物件 (drug) 裡讀取 (原本就是這樣，所以只要確保 processData 正確即可)
-            // groupedDrugs 會用到 'name'，這裡我們檢查一下
-            
             const outOfStockDrugs = computed(() => {
                 return drugs.value
                     .filter(d => d.isOutOfStock)
@@ -490,10 +502,6 @@
                 });
             });
 
-            // 這裡原本用 ATC_DICT[groupCode]，現在 ATC_DICT 不見了。
-            // 但因為我們在 processData 已經把中文寫入 drug 物件了 (atcGroup)，所以我們可以從群組內的第一個藥品反查名稱。
-            // 這是一個聰明的作法，不需要把整本字典傳進來 computed。
-            
             const groupedDrugs = computed(() => {
                 const list = filteredDrugs.value;
                 if (keyword.value) {
@@ -502,11 +510,7 @@
                 const groups = {};
                 list.forEach(drug => {
                     let groupCode = drug.atcGroupCode || 'Other';
-                    
-                    // === 修改：從藥品本身取得中文名稱 (因為 drug.atcGroup 已經在 processData 查好字典了) ===
-                    // 優先順序：ATC 4碼名稱 > ATC 5碼名稱 > 代碼
                     let groupName = drug.atcGroup || drug.atcSubSub || groupCode; 
-                    // =========================================================================
 
                     if (!groups[groupCode]) {
                         groups[groupCode] = { code: groupCode, name: groupName, drugs: [] };
