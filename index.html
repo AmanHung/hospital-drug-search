@@ -278,7 +278,32 @@
                     <h3 class="text-sm font-bold text-green-600 uppercase tracking-wider mb-2 border-b border-green-100 pb-1">衛教資訊</h3>
                     <div class="space-y-3">
                         <div v-if="selectedDrug.sideEffect"><span class="font-bold text-gray-700 text-sm">副作用</span><p class="text-gray-600 text-sm mt-1">{{ selectedDrug.sideEffect }}</p></div>
-                         <div v-if="selectedDrug.patientNote"><span class="font-bold text-gray-700 text-sm">注意事項</span><p class="text-gray-600 text-sm mt-1">{{ selectedDrug.patientNote }}</p></div>
+                        
+                        <div v-if="selectedDrug.pregCategory">
+                            <span class="font-bold text-gray-700 text-sm block mb-1">懷孕分級</span>
+                            <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded font-bold">{{ selectedDrug.pregCategory }}</span>
+                        </div>
+
+                        <div v-if="selectedDrug.warning">
+                            <span class="font-bold text-red-600 text-sm"><i class="fa-solid fa-triangle-exclamation mr-1"></i>警語</span>
+                            <p class="text-red-700 text-sm mt-1 font-bold">{{ selectedDrug.warning }}</p>
+                        </div>
+
+                        <div v-if="selectedDrug.warningEng">
+                            <span class="font-bold text-gray-700 text-sm">警語 (英文)</span>
+                            <p class="text-gray-600 text-sm mt-1">{{ selectedDrug.warningEng }}</p>
+                        </div>
+
+                        <div v-if="selectedDrug.precautionEng">
+                            <span class="font-bold text-gray-700 text-sm">藥品注意事項 (英文)</span>
+                            <p class="text-gray-600 text-sm mt-1">{{ selectedDrug.precautionEng }}</p>
+                        </div>
+
+                        <div v-if="selectedDrug.profNote">
+                            <span class="font-bold text-purple-700 text-sm"><i class="fa-solid fa-user-doctor mr-1"></i>醫護用藥須知</span>
+                            <p class="text-gray-700 text-sm mt-1">{{ selectedDrug.profNote }}</p>
+                        </div>
+                        <div v-if="selectedDrug.patientNote"><span class="font-bold text-gray-700 text-sm">民眾注意事項</span><p class="text-gray-600 text-sm mt-1">{{ selectedDrug.patientNote }}</p></div>
                     </div>
                 </section>
             </div>
@@ -297,8 +322,6 @@
     // ============== 資料來源 ==============
     const DRUG_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTl_HoBeP0qBD79IB7Ulp_xAMRX4Gyx65pgU-4Kf15Lu4g4FqGdVBDSn1BEI6sNXht889zjRx6RErb-/pub?output=csv';
     const ATC_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSMhr-Ocv4uEN6virOvzsEY-c1-tCEs-e1lB-fvB9d2U2XCtcDaHnLnob_Vu6Ktjce4YErY9y6FuaxD/pub?output=csv';
-    
-    // ATC 字典外部連結
     const ATC_DICT_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTFu4K84SNNwPkybX9AD49PxAsj5VLa_cO4lmZNAZdK0BFY7qTL0wlFoDKvrcVmBmbcqYiTzvs9wrDj/pub?output=csv';
     
     const CLOUDINARY_CLOUD_NAME = 'de02nbokt'; 
@@ -347,7 +370,6 @@
                     fetchCsv(ATC_DICT_URL)
                 ])
                 .then(([drugData, atcData, atcDictData]) => {
-                    // 1. 處理藥品主檔
                     const atcMap = {};
                     atcData.forEach(row => {
                         if(row['藥品代碼']) {
@@ -360,14 +382,9 @@
                         }
                     });
 
-                    // 2. 處理 ATC 字典 (自動判斷欄位)
                     const dictionary = {};
                     if (atcDictData && atcDictData.length > 0) {
-                        // 取得第一列的所有欄位名稱 (Header)
                         const headers = Object.keys(atcDictData[0]);
-                        console.log('偵測到的 ATC 字典欄位:', headers);
-
-                        // 聰明尋找欄位 (不分大小寫、去空白)
                         const codeKey = headers.find(h => /code|代碼|atc/i.test(h));
                         const nameKey = headers.find(h => /name|名稱|中文|chinese/i.test(h));
 
@@ -380,19 +397,12 @@
                                 }
                             });
                         } else {
-                            console.warn('無法自動對應 ATC 字典的欄位，請檢查 Google Sheet 標題。');
-                            // Fallback: 如果真的找不到，試著硬抓 'code' 和 'name'
                             atcDictData.forEach(row => {
                                 const c = row['code'] || row['Code'] || row['ATC代碼'];
                                 const n = row['name'] || row['Name'] || row['中文名稱'];
                                 if(c && n) dictionary[c.trim()] = n.trim();
                             });
                         }
-                    }
-
-                    // 檢查字典內容，如果 'A' 沒有抓到，可能是 Google Sheet 裡缺少了分類資料
-                    if (!dictionary['A'] && !dictionary['A01']) {
-                        console.warn('字典中缺少 A, A01 等分類資料，請確認 Sheet 中是否有這些列。');
                     }
 
                     processData(drugData, atcMap, dictionary);
@@ -441,7 +451,18 @@
                         code, nhiCode, isSelfPay, selfPayPrice, sub1, sub2,
                         genericName: row['學名']||'', tradeName: row['商品名(英文)']||row['商品名']||'無商品名',
                         indication: row['適應症']||row['臨床用途']||'', dosage: row['用量用法']||'', sideEffect: row['副作用']||'',
-                        patientNote: row['民眾注意事項']||row['警語']||'', renalNote: row['劑量調整']||'', components: row['藥品成分']||'',
+                        
+                        // === 新增：資料對應 (移除 patientNote 中的 fallback 邏輯) ===
+                        patientNote: row['民眾注意事項']||'', 
+                        renalNote: row['劑量調整']||'', components: row['藥品成分']||'',
+                        // 對應新欄位
+                        pregCategory: row['懷孕分級'] ? row['懷孕分級'].trim() : '',
+                        precautionEng: row['藥品注意事項(英文)'] ? row['藥品注意事項(英文)'].trim() : '',
+                        warning: row['警語'] ? row['警語'].trim() : '',
+                        warningEng: row['警語(英文)'] ? row['警語(英文)'].trim() : '',
+                        profNote: row['醫護用藥須知'] ? row['醫護用藥須知'].trim() : '',
+                        // ===============================================
+
                         pregCategory: row['懷孕分級']||'', highAlert: row['高警訊藥品'], isHighAlert: (row['高警訊藥品'] === 'Y'), 
                         isDiscontinued, isOutOfStock,
                         imgUrl: imgName ? `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/w_400,c_scale,q_auto,f_auto/${imgName}` : null,
@@ -583,6 +604,39 @@
                 currentCategoryName.value = '';
             };
 
+            // === 新增：從詳情頁跳轉至分類列表 ===
+            const goToCategory = (level, drug) => {
+                closeDetail(); // 先關閉詳情視窗
+
+                // 1. 先定位到主分類 (Major)
+                const mainGroup = atcGroups.value.find(g => g.code === drug.atcMainCode);
+                if (!mainGroup) {
+                    alert('查無此分類資料');
+                    return;
+                }
+                selectMajorCategory(mainGroup);
+                if (level === 'main') return;
+
+                // 2. 定位到子分類 (Minor)
+                const subGroup = selectedMajor.value.subs.find(s => s.code === drug.atcSubCode);
+                if (!subGroup) return;
+                selectMinorCategory(subGroup);
+                if (level === 'sub') return;
+
+                // 3. 定位到細分類 (Sub-Sub)
+                if (level === 'subsub') {
+                    if (['J01', 'L01'].includes(drug.atcSubCode)) {
+                        const targetCode = drug.atcGroupCode;
+                        const targetName = drug.atcGroup; 
+                        selectSubMinorCategory({ code: targetCode, name: targetName });
+                    } else {
+                        const targetCode = drug.atcSubSubCode || drug.atcGroupCode;
+                        filterCategory.value = targetCode;
+                        currentCategoryName.value = drug.atcSubSub || drug.atcGroup;
+                    }
+                }
+            };
+
             const resetToHome = () => { keyword.value = ''; filterCategory.value = ''; viewMode.value = 'home'; };
 
             const searchNhiPrice = (code) => {
@@ -604,60 +658,6 @@
                     alert(`找不到替代藥品代碼：${subCode} 的資料`);
                 }
             };
-            // === 新增：從詳情頁跳轉至分類列表 ===
-            const goToCategory = (level, drug) => {
-                closeDetail(); // 先關閉詳情視窗
-
-                // 1. 先定位到主分類 (Major)
-                // 必須遍歷 atcGroups 找到對應代碼的物件，因為需要它的 subs 資料
-                const mainGroup = atcGroups.value.find(g => g.code === drug.atcMainCode);
-                
-                if (!mainGroup) {
-                    alert('查無此分類資料');
-                    return;
-                }
-
-                // 模擬點擊主分類 (設定 selectedMajor 並進入 minor_list)
-                selectMajorCategory(mainGroup);
-
-                // 如果目標只是主分類，就停在這裡 (顯示 minor_list)
-                if (level === 'main') return;
-
-                // 2. 定位到子分類 (Minor)
-                // 在已經設定好的 selectedMajor.subs (這是陣列) 裡面找
-                const subGroup = selectedMajor.value.subs.find(s => s.code === drug.atcSubCode);
-
-                if (!subGroup) return;
-
-                // 模擬點擊子分類 (設定 filterCategory 或 進入 sub_minor_list)
-                selectMinorCategory(subGroup);
-
-                // 如果目標是子分類，就停在這裡 (J01會停在 sub_minor_list, 其他停在 result_list)
-                if (level === 'sub') return;
-
-                // 3. 定位到細分類 (Sub-Sub / Level 4 or 5)
-                if (level === 'subsub') {
-                    // 如果是 J01/L01，selectMinorCategory 會把我們帶到 sub_minor_list
-                    // 我們需要再往下選一層
-                    if (['J01', 'L01'].includes(drug.atcSubCode)) {
-                        // 使用 ATC 4碼 (atcGroupCode) 來篩選
-                        const targetCode = drug.atcGroupCode;
-                        const targetName = drug.atcGroup; // 從藥品資料拿中文名
-                        
-                        // 呼叫原本的選擇細分類函式
-                        selectSubMinorCategory({ code: targetCode, name: targetName });
-                    } else {
-                        // 如果是一般分類，selectMinorCategory 已經把我們帶到 result_list (篩選 3碼)
-                        // 我們要強制覆蓋篩選條件，改為篩選 5碼 (atcSubSubCode)
-                        // 注意：這裡優先使用 Level 4 (GroupCode) 如果沒有才用 Level 5，視你的分組邏輯而定
-                        // 根據你的 groupedDrugs 邏輯，我們篩選最細的那個
-                        
-                        const targetCode = drug.atcSubSubCode || drug.atcGroupCode;
-                        filterCategory.value = targetCode;
-                        currentCategoryName.value = drug.atcSubSub || drug.atcGroup;
-                    }
-                }
-            };
 
             onMounted(() => { fetchAllData(); });
 
@@ -673,4 +673,3 @@
 </script>
 </body>
 </html>
-
