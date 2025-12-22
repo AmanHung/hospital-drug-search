@@ -610,9 +610,9 @@
                 currentCategoryName.value = '';
             };
 
-            // === 新增：從詳情頁跳轉至分類列表 ===
             const goToCategory = (level, drug) => {
-                closeDetail(); // 先關閉詳情視窗
+                closeDetail(); // 1. 關閉詳情視窗
+                keyword.value = ''; // 2. 【修正關鍵】強制清空搜尋關鍵字
 
                 // 1. 先定位到主分類 (Major)
                 const mainGroup = atcGroups.value.find(g => g.code === drug.atcMainCode);
