@@ -47,7 +47,7 @@
                 v-model="keyword" 
                 @input="onSearchInput"
                 type="text" 
-                placeholder="搜尋藥名、學名、代碼..." 
+                placeholder="搜尋藥名、學名、代碼、副作用..." 
                 class="w-full pl-10 pr-10 py-2 rounded-lg border-none focus:ring-2 focus:ring-blue-300 outline-none shadow-inner"
             >
             <button v-if="keyword" @click="keyword=''; onSearchInput()" class="absolute right-3 top-3 text-gray-400">
@@ -356,9 +356,13 @@
                     { name: 'genericName', weight: 0.3 }, 
                     { name: 'nhiCode', weight: 0.2 },     
                     { name: 'atcCode', weight: 0.1 },     
-                    { name: 'indication', weight: 0.1 }   
+                    { name: 'indication', weight: 0.2 },  
+                    { name: 'sideEffect', weight: 0.1 },  
+                    { name: 'warning', weight: 0.1 },     
+                    { name: 'contraindication', weight: 0.1 },
+                    { name: 'patientNote', weight: 0.1 }
                 ],
-                threshold: 0.2,       
+                threshold: 0.3,       
                 ignoreLocation: true,
                 useExtendedSearch: true
             };
@@ -430,15 +434,15 @@
                     // 1. 修改條件：長度必須為 6 碼 (包含英文、數字、符號)
                     if (code.length !== 6) return null;
 
+                    // 2. 新增條件：排除代碼為 653 開頭的藥品
+                    if (code.startsWith('653')) return null;
+
                     // 先取得名稱以便進行篩選
                     const genericName = row['學名'] || '';
                     const tradeName = row['商品名(英文)'] || row['商品名'] || '無商品名';
 
-                    // 2. 修改條件：排除名稱含有「贈」的藥品
+                    // 3. 修改條件：排除名稱含有「贈」的藥品
                     if (tradeName.includes('贈') || genericName.includes('贈')) return null;
-
-                    // 3. 新增條件：排除代碼為 653 開頭的藥品
-                    if (code.startsWith('653')) return null;
 
                     const mapData = atcMap[code] || { atc: '', price: '', sub1: '', sub2: '' };
                     const atc = mapData.atc;
@@ -689,4 +693,3 @@
 </script>
 </body>
 </html>
-
