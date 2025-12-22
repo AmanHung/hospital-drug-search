@@ -427,8 +427,18 @@
                     const code = row['藥品代碼'] ? row['藥品代碼'].trim() : '';
                     if(!code) return null;
                     
-                    const isValidCode = /^[A-Za-z]{4}\d{2}$/.test(code);
-                    if (!isValidCode) return null;
+                    // 1. 修改條件：長度必須為 6 碼 (包含英文、數字、符號)
+                    if (code.length !== 6) return null;
+
+                    // 先取得名稱以便進行篩選
+                    const genericName = row['學名'] || '';
+                    const tradeName = row['商品名(英文)'] || row['商品名'] || '無商品名';
+
+                    // 2. 修改條件：排除名稱含有「贈」的藥品
+                    if (tradeName.includes('贈') || genericName.includes('贈')) return null;
+
+                    // 3. 新增條件：排除代碼為 653 開頭的藥品
+                    if (code.startsWith('653')) return null;
 
                     const mapData = atcMap[code] || { atc: '', price: '', sub1: '', sub2: '' };
                     const atc = mapData.atc;
@@ -454,20 +464,20 @@
 
                     return {
                         code, nhiCode, isSelfPay, selfPayPrice, sub1, sub2,
-                        genericName: row['學名']||'', tradeName: row['商品名(英文)']||row['商品名']||'無商品名',
+                        genericName, tradeName, // 使用前面已經定義好的變數
                         indication: row['適應症']||row['臨床用途']||'', dosage: row['用量用法']||'', sideEffect: row['副作用']||'',
                         
                         patientNote: row['民眾注意事項']||'', 
                         renalNote: row['劑量調整']||'', components: row['藥品成分']||'',
                         
-                        // === 新增：資料對應 (包含禁忌) ===
+                        // === 資料對應 ===
                         pregCategory: row['懷孕分級'] ? row['懷孕分級'].trim() : '',
                         precautionEng: row['藥品注意事項(英文)'] ? row['藥品注意事項(英文)'].trim() : '',
                         warning: row['警語'] ? row['警語'].trim() : '',
                         warningEng: row['警語(英文)'] ? row['警語(英文)'].trim() : '',
                         profNote: row['醫護用藥須知'] ? row['醫護用藥須知'].trim() : '',
                         contraindication: row['禁忌'] ? row['禁忌'].trim() : '',
-                        // ===============================
+                        // =============
 
                         highAlert: row['高警訊藥品'], isHighAlert: (row['高警訊藥品'] === 'Y'), 
                         isDiscontinued, isOutOfStock,
@@ -612,7 +622,7 @@
 
             const goToCategory = (level, drug) => {
                 closeDetail(); // 1. 關閉詳情視窗
-                keyword.value = ''; // 2. 【修正關鍵】強制清空搜尋關鍵字
+                keyword.value = ''; // 2. 強制清空搜尋關鍵字
 
                 // 1. 先定位到主分類 (Major)
                 const mainGroup = atcGroups.value.find(g => g.code === drug.atcMainCode);
