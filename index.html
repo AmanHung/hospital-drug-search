@@ -532,9 +532,10 @@
                 atcGroups.value = Object.values(groups).sort((a,b) => a.code.localeCompare(b.code));
             };
             
+            // === 修改：自動篩選缺貨藥品 (新增過濾條件：排除名稱含有 "(非本院品項)" 的藥品) ===
             const outOfStockDrugs = computed(() => {
                 return drugs.value
-                    .filter(d => d.isOutOfStock)
+                    .filter(d => d.isOutOfStock && (!d.tradeName || !d.tradeName.includes('(非本院品項)')))
                     .sort((a, b) => (a.tradeName || '').localeCompare(b.tradeName || '')); 
             });
             
@@ -693,3 +694,4 @@
 </script>
 </body>
 </html>
+
