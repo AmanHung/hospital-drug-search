@@ -34,7 +34,7 @@
     <header class="sticky top-0 bg-blue-600 p-4 shadow-md z-30">
         <div class="flex justify-between items-center mb-2">
             <h1 class="text-white text-lg font-bold flex items-center cursor-pointer" @click="resetToHome">
-                <i class="fa-solid fa-hospital-user mr-2"></i> 藥品查詢系統
+                <i class="fa-solid fa-hospital-user mr-2"></i> 衛生福利部豐原醫院藥品查詢系統
             </h1>
             <button v-if="keyword || filterCategory || viewMode !== 'home'" @click="resetToHome" class="text-xs bg-blue-500 hover:bg-blue-400 text-white px-3 py-1 rounded-full transition border border-blue-400">
                 <i class="fa-solid fa-rotate-left mr-1"></i> 重置
@@ -697,3 +697,4 @@
 </script>
 </body>
 </html>
+
