@@ -682,7 +682,7 @@
             };
 
             const selectMinorCategory = (sub) => {
-                if (['J01', 'L01'].includes(sub.code)) {
+                if (['J01', 'L01', 'B05'].includes(sub.code)) {
                     const sortedSubsubs = Object.values(sub.subsubs).sort((a,b) => a.code.localeCompare(b.code));
                     selectedMinor.value = { ...sub, subsubs: sortedSubsubs };
                     viewMode.value = 'sub_minor_list';
@@ -732,7 +732,7 @@
                 if (level === 'sub') return;
 
                 if (level === 'subsub') {
-                    if (['J01', 'L01'].includes(drug.atcSubCode)) {
+                    if (['J01', 'L01', 'B05'].includes(drug.atcSubCode)) {
                         const targetCode = drug.atcGroupCode;
                         const targetName = drug.atcGroup; 
                         selectSubMinorCategory({ code: targetCode, name: targetName });
@@ -788,3 +788,4 @@
 </script>
 </body>
 </html>
+
