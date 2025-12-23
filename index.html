@@ -36,18 +36,18 @@
             <h1 class="text-white text-lg font-bold flex items-center cursor-pointer" @click="resetToHome">
                 <i class="fa-solid fa-hospital-user mr-2"></i> 藥品查詢系統
             </h1>
-            <button v-if="keyword || filterCategory || viewMode !== 'home'" @click="resetToHome" class="text-xs bg-blue-500 hover:bg-blue-400 text-white px-3 py-1 rounded-full transition border border-blue-400">
+            <button v-if="keyword || searchCode || searchTrade || searchGeneric || filterCategory || viewMode !== 'home'" @click="resetToHome" class="text-xs bg-blue-500 hover:bg-blue-400 text-white px-3 py-1 rounded-full transition border border-blue-400">
                 <i class="fa-solid fa-rotate-left mr-1"></i> 重置
             </button>
         </div>
 
-        <div class="relative">
+        <div class="relative mb-2">
             <i class="fa-solid fa-search absolute left-3 top-3 text-gray-400"></i>
             <input 
                 v-model="keyword" 
                 @input="onSearchInput"
                 type="text" 
-                placeholder="搜尋藥名、學名、代碼、副作用..." 
+                placeholder="全域搜尋：副作用、適應症、警語..." 
                 class="w-full pl-10 pr-10 py-2 rounded-lg border-none focus:ring-2 focus:ring-blue-300 outline-none shadow-inner"
             >
             <button v-if="keyword" @click="keyword=''; onSearchInput()" class="absolute right-3 top-3 text-gray-400">
@@ -55,7 +55,45 @@
             </button>
         </div>
 
-        <div v-if="viewMode === 'home' && !keyword" class="mt-3">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <div class="relative">
+                <input 
+                    v-model="searchCode" 
+                    @input="onSearchInput"
+                    type="text" 
+                    placeholder="藥品代碼" 
+                    class="w-full pl-3 pr-8 py-1.5 text-sm rounded-lg border border-blue-400 bg-blue-500 placeholder-blue-200 text-white focus:bg-blue-600 focus:ring-2 focus:ring-white outline-none"
+                >
+                <button v-if="searchCode" @click="searchCode=''; onSearchInput()" class="absolute right-2 top-2 text-blue-200 hover:text-white">
+                    <i class="fa-solid fa-times-circle text-xs"></i>
+                </button>
+            </div>
+            <div class="relative">
+                <input 
+                    v-model="searchTrade" 
+                    @input="onSearchInput"
+                    type="text" 
+                    placeholder="藥名 (Trade Name)" 
+                    class="w-full pl-3 pr-8 py-1.5 text-sm rounded-lg border border-blue-400 bg-blue-500 placeholder-blue-200 text-white focus:bg-blue-600 focus:ring-2 focus:ring-white outline-none"
+                >
+                <button v-if="searchTrade" @click="searchTrade=''; onSearchInput()" class="absolute right-2 top-2 text-blue-200 hover:text-white">
+                    <i class="fa-solid fa-times-circle text-xs"></i>
+                </button>
+            </div>
+            <div class="relative">
+                <input 
+                    v-model="searchGeneric" 
+                    @input="onSearchInput"
+                    type="text" 
+                    placeholder="學名 (Generic Name)" 
+                    class="w-full pl-3 pr-8 py-1.5 text-sm rounded-lg border border-blue-400 bg-blue-500 placeholder-blue-200 text-white focus:bg-blue-600 focus:ring-2 focus:ring-white outline-none"
+                >
+                <button v-if="searchGeneric" @click="searchGeneric=''; onSearchInput()" class="absolute right-2 top-2 text-blue-200 hover:text-white">
+                    <i class="fa-solid fa-times-circle text-xs"></i>
+                </button>
+            </div>
+        </div>
+        <div v-if="viewMode === 'home' && !keyword && !searchCode && !searchTrade && !searchGeneric" class="mt-3">
             <button @click="viewMode = 'major_list'" class="w-full bg-blue-700 hover:bg-blue-800 text-white py-2 rounded-lg text-sm font-bold flex items-center justify-center transition shadow-sm border border-blue-500">
                 <i class="fa-solid fa-layer-group mr-2"></i> 藥理分類查詢
             </button>
@@ -70,7 +108,7 @@
             <p class="text-xs mt-2 text-gray-400">載入 ATC 字典中...</p>
         </div>
 
-        <div v-if="!loading && viewMode === 'home' && !keyword" class="py-4">
+        <div v-if="!loading && viewMode === 'home' && !keyword && !searchCode && !searchTrade && !searchGeneric" class="py-4">
             <div v-if="outOfStockDrugs.length > 0" class="animate-slide-up">
                 <div class="bg-orange-50 border border-orange-200 rounded-xl overflow-hidden shadow-sm mx-1">
                     <div class="bg-orange-100 px-4 py-3 border-b border-orange-200 flex justify-between items-center">
@@ -350,7 +388,13 @@
 
     createApp({
         setup() {
+            // === 1. 新增特定搜尋欄位的狀態 ===
             const keyword = ref('');
+            const searchCode = ref('');
+            const searchTrade = ref('');
+            const searchGeneric = ref('');
+            // =============================
+
             const drugs = ref([]);
             const selectedDrug = ref(null);
             const loading = ref(true);
@@ -364,7 +408,6 @@
             const selectedMajor = ref(null); 
             const selectedMinor = ref(null);
 
-            // === Fuse.js 設定 (模糊搜尋) ===
             let fuse = null;
             const fuseOptions = {
                 keys: [
@@ -544,25 +587,48 @@
                 atcGroups.value = Object.values(groups).sort((a,b) => a.code.localeCompare(b.code));
             };
             
-            // === 修改：自動篩選缺貨藥品 (新增過濾條件：排除名稱含有 "(非本院品項)" 的藥品) ===
             const outOfStockDrugs = computed(() => {
                 return drugs.value
                     .filter(d => d.isOutOfStock && (!d.tradeName || !d.tradeName.includes('(非本院品項)')))
                     .sort((a, b) => (a.tradeName || '').localeCompare(b.tradeName || '')); 
             });
             
+           // === 修改：篩選邏輯 ===
            const filteredDrugs = computed(() => {
-                let result = [];
+                let result = drugs.value;
+
+                // 1. 精準搜尋欄位 (使用 threshold: 0.0 極低容錯)
+                // 為了效能，我們直接使用 filter + Fuse 針對特定欄位
+                if (searchCode.value) {
+                    const fuseCode = new Fuse(result, { keys: ['code'], threshold: 0.0, ignoreLocation: true });
+                    result = fuseCode.search(searchCode.value).map(r => r.item);
+                }
+                if (searchTrade.value) {
+                    const fuseTrade = new Fuse(result, { keys: ['tradeName'], threshold: 0.0, ignoreLocation: true });
+                    result = fuseTrade.search(searchTrade.value).map(r => r.item);
+                }
+                if (searchGeneric.value) {
+                    const fuseGeneric = new Fuse(result, { keys: ['genericName'], threshold: 0.0, ignoreLocation: true });
+                    result = fuseGeneric.search(searchGeneric.value).map(r => r.item);
+                }
+
+                // 2. 全域關鍵字搜尋 (維持原本較寬鬆的搜尋，用於副作用等)
                 if (keyword.value) {
                     const k = keyword.value.trim();
                     if (fuse) {
-                        const searchResults = fuse.search(k);
+                        // 如果已經經過上方篩選，這裡需要對 result 再建一次暫時的 Fuse (雖然效能稍差但邏輯正確)
+                        // 或者直接用原本的 fuse 對 keyword 搜尋，然後取交集。
+                        // 簡單起見，我們對目前的 result 進行搜尋
+                        const tempFuse = new Fuse(result, fuseOptions);
+                        const searchResults = tempFuse.search(k);
                         result = searchResults.map(res => res.item);
                     }
                 } 
-                else if (filterCategory.value) {
-                    result = drugs.value.filter(d => d.atcCode.startsWith(filterCategory.value));
-                } else {
+                else if (!searchCode.value && !searchTrade.value && !searchGeneric.value && filterCategory.value) {
+                    // 只有在沒有任何搜尋字串時，才套用分類篩選
+                    result = result.filter(d => d.atcCode.startsWith(filterCategory.value));
+                } else if (!searchCode.value && !searchTrade.value && !searchGeneric.value && !keyword.value) {
+                    // 完全沒搜尋也沒分類，回傳空
                     return [];
                 }
 
@@ -584,7 +650,8 @@
 
             const groupedDrugs = computed(() => {
                 const list = filteredDrugs.value;
-                if (keyword.value) {
+                // 只要有任何搜尋條件，就顯示為搜尋結果
+                if (keyword.value || searchCode.value || searchTrade.value || searchGeneric.value) {
                     return [{ code: 'SEARCH', name: `搜尋結果 (${list.length} 筆)`, drugs: list }];
                 }
                 const groups = {};
@@ -601,7 +668,12 @@
             });
 
             const onSearchInput = () => {
-                if(keyword.value) { viewMode.value = 'result_list'; filterCategory.value = ''; } else { viewMode.value = 'home'; }
+                if(keyword.value || searchCode.value || searchTrade.value || searchGeneric.value) { 
+                    viewMode.value = 'result_list'; 
+                    filterCategory.value = ''; 
+                } else { 
+                    viewMode.value = 'home'; 
+                }
             };
 
             const selectMajorCategory = (cat) => {
@@ -638,10 +710,14 @@
             };
 
             const goToCategory = (level, drug) => {
-                closeDetail(); // 1. 關閉詳情視窗
-                keyword.value = ''; // 2. 強制清空搜尋關鍵字
+                closeDetail(); 
+                // === 修改：跳轉時清空所有搜尋欄位 ===
+                keyword.value = ''; 
+                searchCode.value = '';
+                searchTrade.value = '';
+                searchGeneric.value = '';
+                // ================================
 
-                // 1. 先定位到主分類 (Major)
                 const mainGroup = atcGroups.value.find(g => g.code === drug.atcMainCode);
                 if (!mainGroup) {
                     alert('查無此分類資料');
@@ -650,13 +726,11 @@
                 selectMajorCategory(mainGroup);
                 if (level === 'main') return;
 
-                // 2. 定位到子分類 (Minor)
                 const subGroup = selectedMajor.value.subs.find(s => s.code === drug.atcSubCode);
                 if (!subGroup) return;
                 selectMinorCategory(subGroup);
                 if (level === 'sub') return;
 
-                // 3. 定位到細分類 (Sub-Sub)
                 if (level === 'subsub') {
                     if (['J01', 'L01'].includes(drug.atcSubCode)) {
                         const targetCode = drug.atcGroupCode;
@@ -670,7 +744,14 @@
                 }
             };
 
-            const resetToHome = () => { keyword.value = ''; filterCategory.value = ''; viewMode.value = 'home'; };
+            const resetToHome = () => { 
+                keyword.value = ''; 
+                searchCode.value = '';
+                searchTrade.value = '';
+                searchGeneric.value = '';
+                filterCategory.value = ''; 
+                viewMode.value = 'home'; 
+            };
 
             const searchNhiPrice = (code) => {
                 navigator.clipboard.writeText(code).then(() => {
@@ -695,7 +776,8 @@
             onMounted(() => { fetchAllData(); });
 
             return {
-                keyword, filteredDrugs, groupedDrugs, selectedDrug, loading, error, 
+                keyword, searchCode, searchTrade, searchGeneric, // 匯出新變數
+                filteredDrugs, groupedDrugs, selectedDrug, loading, error, 
                 viewMode, atcGroups, selectedMajor, selectedMinor, filterCategory, currentCategoryName,
                 onSearchInput, selectMajorCategory, selectMinorCategory, selectSubMinorCategory, resetToHome,
                 openDetail, closeDetail, imageLoadError, searchNhiPrice,
@@ -706,8 +788,3 @@
 </script>
 </body>
 </html>
-
-
-
-
-
