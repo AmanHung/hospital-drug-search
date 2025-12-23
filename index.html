@@ -207,7 +207,8 @@
                         <div v-if="drug.atcSubSub" class="absolute top-0 left-0 z-10">
                             <span class="bg-blue-50 text-blue-600 text-[10px] px-2 py-0.5 font-bold rounded-br-lg shadow-sm border-r border-b border-blue-100">{{ drug.atcSubSub }}</span>
                         </div>
-                        <div class="absolute top-0 right-0 flex z-10">
+                       <div class="absolute top-0 right-0 flex z-10">
+                            <span v-if="drug.isPublicPay" class="bg-purple-600 text-white text-[10px] px-2 py-1 font-bold rounded-bl-lg ml-1 shadow-sm">公費</span>                  
                             <span v-if="drug.isSelfPay" class="bg-green-600 text-white text-[10px] px-2 py-1 font-bold rounded-bl-lg ml-1 shadow-sm">自費</span>
                             <span v-if="drug.isDiscontinued" class="bg-gray-500 text-white text-[10px] px-2 py-1 font-bold rounded-bl-lg ml-1 shadow-sm">已停用</span>
                             <span v-if="drug.isOutOfStock" class="bg-orange-500 text-white text-[10px] px-2 py-1 font-bold rounded-bl-lg ml-1 shadow-sm">缺貨中</span>
@@ -485,7 +486,7 @@
                 });
             };
 
-            const processData = (rawData, atcMap, dict) => {
+           const processData = (rawData, atcMap, dict) => {
                 dict = dict || {};
 
                 let processed = rawData.map(row => {
@@ -509,7 +510,14 @@
 
                     const rawNhi = row['健保碼'] ? row['健保碼'].trim() : '';
                     const nhiCode = rawNhi || '-';
-                    const isSelfPay = (nhiCode === '-');
+
+                    // === 修改重點：公費與自費的判斷邏輯 ===
+                    // 1. 公費判斷：名稱包含「公費」
+                    const isPublicPay = tradeName.includes('公費');
+                    
+                    // 2. 自費判斷：無健保碼 且 不是公費
+                    const isSelfPay = (nhiCode === '-') && !isPublicPay;
+                    // ===================================
 
                     const imgName = row['圖檔名稱'] ? row['圖檔名稱'].trim() : '';
                     const status1 = row['門診停用否'] ? row['門診停用否'].trim().toUpperCase() : '';
@@ -524,7 +532,8 @@
                     if (atc.length >= 5) { const c5 = atc.substring(0, 5); atcSubSub = dict[c5] || c5; }
 
                     return {
-                        code, nhiCode, isSelfPay, selfPayPrice, sub1, sub2, orderNote,
+                        code, nhiCode, isSelfPay, isPublicPay, // 記得回傳 isPublicPay
+                        selfPayPrice, sub1, sub2, orderNote,
                         genericName, tradeName, 
                         indication: row['適應症']||row['臨床用途']||'', dosage: row['用量用法']||'', sideEffect: row['副作用']||'',
                         
@@ -788,4 +797,5 @@
 </script>
 </body>
 </html>
+
 
