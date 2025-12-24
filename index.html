@@ -494,7 +494,6 @@
                     if(!code) return null;
                     
                     if (code.length !== 6) return null;
-                    if (code.startsWith('653')) return null;
 
                     const genericName = row['學名'] || '';
                     const tradeName = row['商品名(英文)'] || row['商品名'] || '無商品名';
@@ -797,5 +796,6 @@
 </script>
 </body>
 </html>
+
 
 
