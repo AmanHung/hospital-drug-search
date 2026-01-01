@@ -523,6 +523,23 @@
                     const status2 = row['住院停用否'] ? row['住院停用否'].trim().toUpperCase() : '';
                     let isDiscontinued = (status1 === 'Y' || status2 === 'Y') && !(status1 === 'N' || status2 === 'N');
                     let isOutOfStock = (status1 === 'C' || status2 === 'C') && !isDiscontinued;
+                    // [新增功能] 過濾超過一年的已停用舊資料
+                    if (isDiscontinued) {
+                        // 讀取「修改時間」欄位，請確保 CSV 標題名稱正確
+                        const updateDateStr = row['修改時間'] ? row['修改時間'].trim() : '';
+                        
+                        // 只有當日期欄位有值時才進行檢核；若空白則預設保留，避免誤刪
+                        if (updateDateStr) {
+                            const updateDate = new Date(updateDateStr);
+                            // 確認日期格式有效
+                            if (!isNaN(updateDate.getTime())) {
+                                // 若 修改時間 < 一年前，回傳 null (不顯示)
+                                if (updateDate < oneYearAgo) {
+                                    return null; 
+                                }
+                            }
+                        }
+                    }
 
                     let atcMain = '', atcSub = '', atcGroup = '', atcSubSub = '';
                     if (atc.length >= 1) { const c1 = atc.substring(0, 1); atcMain = dict[c1] || `分類 ${c1}`; }
@@ -796,6 +813,7 @@
 </script>
 </body>
 </html>
+
 
 
 
