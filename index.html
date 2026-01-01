@@ -449,8 +449,9 @@
                                 price: row['自費價'] ? row['自費價'].trim() : '',
                                 sub1: row['替代院內代碼1'] ? row['替代院內代碼1'].trim() : '',
                                 sub2: row['替代院內代碼2'] ? row['替代院內代碼2'].trim() : '',
-                                orderNote: row['醫令提示訊息'] ? row['醫令提示訊息'].trim() : '' 
-                                isLimited: row['限科用藥否'] ? row['限科用藥否'].trim() === '限專科' : false
+                                orderNote: row['醫令提示訊息'] ? row['醫令提示訊息'].trim() : '',
+                                // [新增] 讀取限科用藥欄位，若值為 "限專科" 則標記為 true
+                                isLimited: row['限科用藥否'] ? row['限科用藥否'].trim() === '限專科' : false 
                             };
                         }
                     });
@@ -814,6 +815,7 @@
 </script>
 </body>
 </html>
+
 
 
 
