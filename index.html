@@ -489,6 +489,10 @@
            const processData = (rawData, atcMap, dict) => {
                 dict = dict || {};
 
+                // 1. 定義「一年前」的時間點
+                const oneYearAgo = new Date();
+                oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
                 let processed = rawData.map(row => {
                     const code = row['藥品代碼'] ? row['藥品代碼'].trim() : '';
                     if(!code) return null;
@@ -510,33 +514,36 @@
                     const rawNhi = row['健保碼'] ? row['健保碼'].trim() : '';
                     const nhiCode = rawNhi || '-';
 
-                    // === 修改重點：公費與自費的判斷邏輯 ===
-                    // 1. 公費判斷：名稱包含「公費」
+                    // 公費與自費判斷
                     const isPublicPay = tradeName.includes('公費');
-                    
-                    // 2. 自費判斷：無健保碼 且 不是公費
                     const isSelfPay = (nhiCode === '-') && !isPublicPay;
-                    // ===================================
 
                     const imgName = row['圖檔名稱'] ? row['圖檔名稱'].trim() : '';
                     const status1 = row['門診停用否'] ? row['門診停用否'].trim().toUpperCase() : '';
                     const status2 = row['住院停用否'] ? row['住院停用否'].trim().toUpperCase() : '';
                     let isDiscontinued = (status1 === 'Y' || status2 === 'Y') && !(status1 === 'N' || status2 === 'N');
                     let isOutOfStock = (status1 === 'C' || status2 === 'C') && !isDiscontinued;
-                    // [新增功能] 過濾超過一年的已停用舊資料
+
+                    // [修正重點] 針對 "20250826103924" 格式進行過濾
                     if (isDiscontinued) {
-                        // 讀取「修改時間」欄位，請確保 CSV 標題名稱正確
+                        // 抓取欄位：若您的欄位名稱不是「修改時間」，請在此更換 (例如 row['異動日期'])
                         const updateDateStr = row['修改時間'] ? row['修改時間'].trim() : '';
                         
-                        // 只有當日期欄位有值時才進行檢核；若空白則預設保留，避免誤刪
-                        if (updateDateStr) {
-                            const updateDate = new Date(updateDateStr);
-                            // 確認日期格式有效
-                            if (!isNaN(updateDate.getTime())) {
-                                // 若 修改時間 < 一年前，回傳 null (不顯示)
-                                if (updateDate < oneYearAgo) {
-                                    return null; 
-                                }
+                        // 檢查是否為 14 碼純數字 (YYYYMMDDHHmmss)
+                        if (updateDateStr && /^\d{14}$/.test(updateDateStr)) {
+                            // 手動切分字串
+                            const year = parseInt(updateDateStr.substring(0, 4));
+                            const month = parseInt(updateDateStr.substring(4, 6)) - 1; // JS 月份從 0 開始
+                            const day = parseInt(updateDateStr.substring(6, 8));
+                            const hour = parseInt(updateDateStr.substring(8, 10));
+                            const minute = parseInt(updateDateStr.substring(10, 12));
+                            const second = parseInt(updateDateStr.substring(12, 14));
+
+                            const updateDate = new Date(year, month, day, hour, minute, second);
+
+                            // 比對：若修改日期早於一年前，則隱藏 (return null)
+                            if (updateDate < oneYearAgo) {
+                                return null; 
                             }
                         }
                     }
@@ -548,21 +555,18 @@
                     if (atc.length >= 5) { const c5 = atc.substring(0, 5); atcSubSub = dict[c5] || c5; }
 
                     return {
-                        code, nhiCode, isSelfPay, isPublicPay, // 記得回傳 isPublicPay
+                        code, nhiCode, isSelfPay, isPublicPay,
                         selfPayPrice, sub1, sub2, orderNote,
                         genericName, tradeName, 
                         indication: row['適應症']||row['臨床用途']||'', dosage: row['用量用法']||'', sideEffect: row['副作用']||'',
-                        
                         patientNote: row['民眾注意事項']||'', 
                         renalNote: row['劑量調整']||'', components: row['藥品成分']||'',
-                        
                         pregCategory: row['懷孕分級'] ? row['懷孕分級'].trim() : '',
                         precautionEng: row['藥品注意事項(英文)'] ? row['藥品注意事項(英文)'].trim() : '',
                         warning: row['警語'] ? row['警語'].trim() : '',
                         warningEng: row['警語(英文)'] ? row['警語(英文)'].trim() : '',
                         profNote: row['醫護用藥須知'] ? row['醫護用藥須知'].trim() : '',
                         contraindication: row['禁忌'] ? row['禁忌'].trim() : '',
-
                         highAlert: row['高警訊藥品'], isHighAlert: (row['高警訊藥品'] === 'Y'), 
                         isDiscontinued, isOutOfStock,
                         imgUrl: imgName ? `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/w_400,c_scale,q_auto,f_auto/${imgName}` : null,
@@ -813,6 +817,7 @@
 </script>
 </body>
 </html>
+
 
 
 
