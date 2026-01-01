@@ -207,8 +207,9 @@
                         <div v-if="drug.atcSubSub" class="absolute top-0 left-0 z-10">
                             <span class="bg-blue-50 text-blue-600 text-[10px] px-2 py-0.5 font-bold rounded-br-lg shadow-sm border-r border-b border-blue-100">{{ drug.atcSubSub }}</span>
                         </div>
-                       <div class="absolute top-0 right-0 flex z-10">
+                      <div class="absolute top-0 right-0 flex z-10">
                             <span v-if="drug.isPublicPay" class="bg-purple-600 text-white text-[10px] px-2 py-1 font-bold rounded-bl-lg ml-1 shadow-sm">公費</span>                  
+                            <span v-if="drug.isLimited" class="bg-rose-600 text-white text-[10px] px-2 py-1 font-bold rounded-bl-lg ml-1 shadow-sm">限專科</span>
                             <span v-if="drug.isSelfPay" class="bg-green-600 text-white text-[10px] px-2 py-1 font-bold rounded-bl-lg ml-1 shadow-sm">自費</span>
                             <span v-if="drug.isDiscontinued" class="bg-gray-500 text-white text-[10px] px-2 py-1 font-bold rounded-bl-lg ml-1 shadow-sm">已停用</span>
                             <span v-if="drug.isOutOfStock" class="bg-orange-500 text-white text-[10px] px-2 py-1 font-bold rounded-bl-lg ml-1 shadow-sm">缺貨中</span>
@@ -449,6 +450,7 @@
                                 sub1: row['替代院內代碼1'] ? row['替代院內代碼1'].trim() : '',
                                 sub2: row['替代院內代碼2'] ? row['替代院內代碼2'].trim() : '',
                                 orderNote: row['醫令提示訊息'] ? row['醫令提示訊息'].trim() : '' 
+                                isLimited: row['限科用藥否'] ? row['限科用藥否'].trim() === '限專科' : false
                             };
                         }
                     });
@@ -504,17 +506,18 @@
 
                     if (tradeName.includes('贈') || genericName.includes('贈')) return null;
 
-                    const mapData = atcMap[code] || { atc: '', price: '', sub1: '', sub2: '', orderNote: '' };
+                    // [修改] 取出 isLimited 狀態
+                    const mapData = atcMap[code] || { atc: '', price: '', sub1: '', sub2: '', orderNote: '', isLimited: false };
                     const atc = mapData.atc;
                     const selfPayPrice = mapData.price;
                     const sub1 = mapData.sub1;
                     const sub2 = mapData.sub2;
                     const orderNote = mapData.orderNote;
+                    const isLimited = mapData.isLimited; // 取得限專科狀態
 
                     const rawNhi = row['健保碼'] ? row['健保碼'].trim() : '';
                     const nhiCode = rawNhi || '-';
 
-                    // 公費與自費判斷
                     const isPublicPay = tradeName.includes('公費');
                     const isSelfPay = (nhiCode === '-') && !isPublicPay;
 
@@ -524,24 +527,18 @@
                     let isDiscontinued = (status1 === 'Y' || status2 === 'Y') && !(status1 === 'N' || status2 === 'N');
                     let isOutOfStock = (status1 === 'C' || status2 === 'C') && !isDiscontinued;
 
-                    // [修正重點] 針對 "20250826103924" 格式進行過濾
+                    // 過濾舊資料邏輯 (保留上一輪的修正)
                     if (isDiscontinued) {
-                        // 抓取欄位：若您的欄位名稱不是「修改時間」，請在此更換 (例如 row['異動日期'])
                         const updateDateStr = row['修改時間'] ? row['修改時間'].trim() : '';
-                        
-                        // 檢查是否為 14 碼純數字 (YYYYMMDDHHmmss)
                         if (updateDateStr && /^\d{14}$/.test(updateDateStr)) {
-                            // 手動切分字串
                             const year = parseInt(updateDateStr.substring(0, 4));
-                            const month = parseInt(updateDateStr.substring(4, 6)) - 1; // JS 月份從 0 開始
+                            const month = parseInt(updateDateStr.substring(4, 6)) - 1; 
                             const day = parseInt(updateDateStr.substring(6, 8));
                             const hour = parseInt(updateDateStr.substring(8, 10));
                             const minute = parseInt(updateDateStr.substring(10, 12));
                             const second = parseInt(updateDateStr.substring(12, 14));
-
                             const updateDate = new Date(year, month, day, hour, minute, second);
 
-                            // 比對：若修改日期早於一年前，則隱藏 (return null)
                             if (updateDate < oneYearAgo) {
                                 return null; 
                             }
@@ -555,7 +552,7 @@
                     if (atc.length >= 5) { const c5 = atc.substring(0, 5); atcSubSub = dict[c5] || c5; }
 
                     return {
-                        code, nhiCode, isSelfPay, isPublicPay,
+                        code, nhiCode, isSelfPay, isPublicPay, isLimited, // [新增] 回傳 isLimited
                         selfPayPrice, sub1, sub2, orderNote,
                         genericName, tradeName, 
                         indication: row['適應症']||row['臨床用途']||'', dosage: row['用量用法']||'', sideEffect: row['副作用']||'',
@@ -579,7 +576,7 @@
                 fuse = new Fuse(processed, fuseOptions);
                 buildAtcTree(processed);
             };
-
+    
             const buildAtcTree = (data) => {
                 const groups = {}; 
                 data.forEach(d => {
@@ -817,6 +814,7 @@
 </script>
 </body>
 </html>
+
 
 
 
