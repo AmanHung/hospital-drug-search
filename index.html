@@ -31,41 +31,41 @@
         <button @click="error = ''" class="mt-2 text-xs bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded border border-red-300">關閉</button>
     </div>
 
-    <header class="sticky top-0 bg-blue-600 p-4 shadow-md z-30">
-        <div class="flex justify-between items-center mb-2">
-            <h1 class="text-white text-lg font-bold flex items-center cursor-pointer" @click="resetToHome">
+   <header class="sticky top-0 bg-blue-600 p-4 shadow-md z-30">
+        <div class="flex justify-between items-center mb-3">
+            <h1 class="text-white text-xl font-bold flex items-center cursor-pointer" @click="resetToHome">
                 <i class="fa-solid fa-hospital-user mr-2"></i> 藥品查詢系統
             </h1>
-            <button v-if="keyword || searchCode || searchTrade || searchGeneric || filterCategory || viewMode !== 'home'" @click="resetToHome" class="text-xs bg-blue-500 hover:bg-blue-400 text-white px-3 py-1 rounded-full transition border border-blue-400">
+            <button v-if="keyword || searchCode || searchTrade || searchGeneric || filterCategory || viewMode !== 'home'" @click="resetToHome" class="text-sm bg-blue-500 hover:bg-blue-400 text-white px-4 py-1.5 rounded-full transition border border-blue-400 shadow-sm">
                 <i class="fa-solid fa-rotate-left mr-1"></i> 重置
             </button>
         </div>
 
-        <div class="relative mb-2">
-            <i class="fa-solid fa-search absolute left-3 top-3 text-gray-400"></i>
+        <div class="relative mb-3">
+            <i class="fa-solid fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg"></i>
             <input 
                 v-model="keyword" 
                 @input="onSearchInput"
                 type="text" 
                 placeholder="全域搜尋：副作用、適應症、警語..." 
-                class="w-full pl-10 pr-10 py-2 rounded-lg border-none focus:ring-2 focus:ring-blue-300 outline-none shadow-inner"
+                class="w-full pl-12 pr-10 py-3 text-lg rounded-xl border-none focus:ring-4 focus:ring-blue-300/50 outline-none shadow-inner"
             >
-            <button v-if="keyword" @click="keyword=''; onSearchInput()" class="absolute right-3 top-3 text-gray-400">
-                <i class="fa-solid fa-times-circle"></i>
+            <button v-if="keyword" @click="keyword=''; onSearchInput()" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 p-1">
+                <i class="fa-solid fa-times-circle text-xl"></i>
             </button>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div class="relative">
                 <input 
                     v-model="searchCode" 
                     @input="onSearchInput"
                     type="text" 
                     placeholder="藥品代碼" 
-                    class="w-full pl-3 pr-8 py-1.5 text-sm rounded-lg border border-blue-400 bg-blue-500 placeholder-blue-200 text-white focus:bg-blue-600 focus:ring-2 focus:ring-white outline-none"
+                    class="w-full pl-4 pr-10 py-2.5 text-base rounded-lg border border-blue-400 bg-blue-500 placeholder-blue-200 text-white focus:bg-blue-600 focus:ring-2 focus:ring-white outline-none shadow-sm"
                 >
-                <button v-if="searchCode" @click="searchCode=''; onSearchInput()" class="absolute right-2 top-2 text-blue-200 hover:text-white">
-                    <i class="fa-solid fa-times-circle text-xs"></i>
+                <button v-if="searchCode" @click="searchCode=''; onSearchInput()" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-blue-200 hover:text-white p-1">
+                    <i class="fa-solid fa-times-circle text-base"></i>
                 </button>
             </div>
             <div class="relative">
@@ -74,10 +74,10 @@
                     @input="onSearchInput"
                     type="text" 
                     placeholder="藥名 (Trade Name)" 
-                    class="w-full pl-3 pr-8 py-1.5 text-sm rounded-lg border border-blue-400 bg-blue-500 placeholder-blue-200 text-white focus:bg-blue-600 focus:ring-2 focus:ring-white outline-none"
+                    class="w-full pl-4 pr-10 py-2.5 text-base rounded-lg border border-blue-400 bg-blue-500 placeholder-blue-200 text-white focus:bg-blue-600 focus:ring-2 focus:ring-white outline-none shadow-sm"
                 >
-                <button v-if="searchTrade" @click="searchTrade=''; onSearchInput()" class="absolute right-2 top-2 text-blue-200 hover:text-white">
-                    <i class="fa-solid fa-times-circle text-xs"></i>
+                <button v-if="searchTrade" @click="searchTrade=''; onSearchInput()" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-blue-200 hover:text-white p-1">
+                    <i class="fa-solid fa-times-circle text-base"></i>
                 </button>
             </div>
             <div class="relative">
@@ -86,15 +86,16 @@
                     @input="onSearchInput"
                     type="text" 
                     placeholder="學名 (Generic Name)" 
-                    class="w-full pl-3 pr-8 py-1.5 text-sm rounded-lg border border-blue-400 bg-blue-500 placeholder-blue-200 text-white focus:bg-blue-600 focus:ring-2 focus:ring-white outline-none"
+                    class="w-full pl-4 pr-10 py-2.5 text-base rounded-lg border border-blue-400 bg-blue-500 placeholder-blue-200 text-white focus:bg-blue-600 focus:ring-2 focus:ring-white outline-none shadow-sm"
                 >
-                <button v-if="searchGeneric" @click="searchGeneric=''; onSearchInput()" class="absolute right-2 top-2 text-blue-200 hover:text-white">
-                    <i class="fa-solid fa-times-circle text-xs"></i>
+                <button v-if="searchGeneric" @click="searchGeneric=''; onSearchInput()" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-blue-200 hover:text-white p-1">
+                    <i class="fa-solid fa-times-circle text-base"></i>
                 </button>
             </div>
         </div>
-        <div v-if="viewMode === 'home' && !keyword && !searchCode && !searchTrade && !searchGeneric" class="mt-3">
-            <button @click="viewMode = 'major_list'" class="w-full bg-blue-700 hover:bg-blue-800 text-white py-2 rounded-lg text-sm font-bold flex items-center justify-center transition shadow-sm border border-blue-500">
+        
+        <div v-if="viewMode === 'home' && !keyword && !searchCode && !searchTrade && !searchGeneric" class="mt-4">
+            <button @click="viewMode = 'major_list'" class="w-full bg-blue-700 hover:bg-blue-800 text-white py-3 rounded-xl text-base font-bold flex items-center justify-center transition shadow-lg border border-blue-500">
                 <i class="fa-solid fa-layer-group mr-2"></i> 藥理分類查詢
             </button>
         </div>
@@ -815,6 +816,7 @@
 </script>
 </body>
 </html>
+
 
 
 
