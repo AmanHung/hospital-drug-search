@@ -436,12 +436,9 @@
                 useExtendedSearch: true
             };
 
-            // 單純下載乾淨直出的 CSV 檔案，並帶入 cb 參數避免舊快取
+            // [最終修正] 移除所有自訂參數與時間戳記，向 Google API 請求最純淨的官方格式，確保 Safari 完美通行
             const fetchCsv = (url) => new Promise((resolve, reject) => {
-                const separator = url.includes('?') ? '&' : '?';
-                const targetUrl = url + separator + 'cb=' + new Date().getTime();
-                
-                Papa.parse(targetUrl, { 
+                Papa.parse(url, { 
                     download: true, 
                     header: true, 
                     skipEmptyLines: true, 
