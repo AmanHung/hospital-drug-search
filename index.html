@@ -384,9 +384,14 @@
     const { createApp, ref, computed, onMounted } = Vue;
 
     // ============== 資料來源 ==============
-    const DRUG_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTl_HoBeP0qBD79IB7Ulp_xAMRX4Gyx65pgU-4Kf15Lu4g4FqGdVBDSn1BEI6sNXht889zjRx6RErb-/pub?output=csv';
-    const ATC_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSMhr-Ocv4uEN6virOvzsEY-c1-tCEs-e1lB-fvB9d2U2XCtcDaHnLnob_Vu6Ktjce4YErY9y6FuaxD/pub?output=csv';
-    const ATC_DICT_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTFu4K84SNNwPkybX9AD49PxAsj5VLa_cO4lmZNAZdK0BFY7qTL0wlFoDKvrcVmBmbcqYiTzvs9wrDj/pub?output=csv';
+    // 1. 藥品主檔
+    const DRUG_DATA_URL = 'https://docs.google.com/spreadsheets/d/1dqDqoHtj44qfY4zTVFScwWC3zYd1ptrmm9c8k88CgpU/gviz/tq?tqx=out:csv&sheet=工作表1';
+    
+    // 2. ATC 對照檔
+    const ATC_DATA_URL = 'https://docs.google.com/spreadsheets/d/1a4fpsU7IlQrhadagEYN7bnTvb1ocraey3MXIrHaVhFs/gviz/tq?tqx=out:csv&sheet=工作表1';
+    
+    // 3. ATC 字典檔
+    const ATC_DICT_URL = 'https://docs.google.com/spreadsheets/d/1itTU1KNJoZUrQvTiZttHIsTj4vMqHEWF2jZBDfE_Zlg/gviz/tq?tqx=out:csv&sheet=工作表1';;
     
     const CLOUDINARY_CLOUD_NAME = 'de02nbokt'; 
 
@@ -431,12 +436,12 @@
                 useExtendedSearch: true
             };
 
-            // [修改] 維持 PapaParse 單純 GET 請求避免 CORS 報錯，僅在網址尾端加上隨機時間戳破解手機快取
+            // 單純下載乾淨直出的 CSV 檔案，並帶入 cb 參數避免舊快取
             const fetchCsv = (url) => new Promise((resolve, reject) => {
                 const separator = url.includes('?') ? '&' : '?';
-                const cacheBusterUrl = url + separator + 'cb=' + new Date().getTime();
+                const targetUrl = url + separator + 'cb=' + new Date().getTime();
                 
-                Papa.parse(cacheBusterUrl, { 
+                Papa.parse(targetUrl, { 
                     download: true, 
                     header: true, 
                     skipEmptyLines: true, 
