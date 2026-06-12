@@ -579,7 +579,7 @@
                         contraindication: row['禁忌'] ? row['禁忌'].trim() : '',
                         highAlert: row['高警訊藥品'], isHighAlert: (row['高警訊藥品'] === 'Y'), 
                         isDiscontinued, isOutOfStock,
-                        imgUrl: imgName ? `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/w_400,c_scale,q_auto,f_auto/${imgName}` : null,
+                        imgUrl: imgName ? `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/w_400,c_scale,q_auto,f_auto/${imgName}?t=${new Date().getTime()}` : null,
                         leafletLink: row['超連結']||'', atcCode: atc, atcMain, atcMainCode: atc.substring(0,1), 
                         atcSub, atcSubCode: atc.substring(0,3), atcGroup, atcGroupCode: atc.substring(0,4), atcSubSub, atcSubSubCode: atc.substring(0,5)
                     };
