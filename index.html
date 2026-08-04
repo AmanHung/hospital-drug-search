@@ -388,7 +388,15 @@
     const ATC_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSMhr-Ocv4uEN6virOvzsEY-c1-tCEs-e1lB-fvB9d2U2XCtcDaHnLnob_Vu6Ktjce4YErY9y6FuaxD/pub?output=csv';
     const ATC_DICT_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTFu4K84SNNwPkybX9AD49PxAsj5VLa_cO4lmZNAZdK0BFY7qTL0wlFoDKvrcVmBmbcqYiTzvs9wrDj/pub?output=csv';
     
-    const CLOUDINARY_CLOUD_NAME = 'de02nbokt'; 
+    const CLOUDINARY_CLOUD_NAME = 'de02nbokt';
+
+    // Cloudinary 的 public ID 使用藥品代碼；網址不帶副檔名即可同時支援 JPG 與 PNG。
+    const buildDrugImageUrl = (code, cacheBuster = false) => {
+        const publicId = String(code || '').trim();
+        if (!publicId) return null;
+        const url = `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/w_400,c_scale,q_auto,f_auto/${encodeURIComponent(publicId)}`;
+        return cacheBuster ? `${url}?t=${Date.now()}` : url;
+    };
 
     createApp({
         setup() {
@@ -535,6 +543,7 @@
                     const isSelfPay = (nhiCode === '-') && !isPublicPay;
 
                     const imgName = row['圖檔名稱'] ? row['圖檔名稱'].trim() : '';
+                    const hasImage = (row['圖片否'] || '').trim().toUpperCase() === 'Y' || Boolean(imgName);
                     const status1 = row['門診停用否'] ? row['門診停用否'].trim().toUpperCase() : '';
                     const status2 = row['住院停用否'] ? row['住院停用否'].trim().toUpperCase() : '';
                     let isDiscontinued = (status1 === 'Y' || status2 === 'Y') && !(status1 === 'N' || status2 === 'N');
@@ -579,7 +588,7 @@
                         contraindication: row['禁忌'] ? row['禁忌'].trim() : '',
                         highAlert: row['高警訊藥品'], isHighAlert: (row['高警訊藥品'] === 'Y'), 
                         isDiscontinued, isOutOfStock,
-                        imgUrl: imgName ? `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/w_400,c_scale,q_auto,f_auto/${imgName}?t=${new Date().getTime()}` : null,
+                        imgUrl: hasImage ? buildDrugImageUrl(code, true) : null,
                         leafletLink: row['超連結']||'', atcCode: atc, atcMain, atcMainCode: atc.substring(0,1), 
                         atcSub, atcSubCode: atc.substring(0,3), atcGroup, atcGroupCode: atc.substring(0,4), atcSubSub, atcSubSubCode: atc.substring(0,5)
                     };
