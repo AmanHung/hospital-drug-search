@@ -597,6 +597,13 @@
                 drugs.value = processed;
                 fuse = new Fuse(processed, fuseOptions);
                 buildAtcTree(processed);
+                // Exact hospital-code deep link, opened only after the live data is ready.
+                const requestedCode = new URLSearchParams(window.location.search).get('code');
+                if (requestedCode) {
+                    const linkedDrug = processed.find(d => d.code === requestedCode.trim());
+                    searchCode.value = requestedCode.trim();
+                    if (linkedDrug) selectedDrug.value = linkedDrug;
+                }
             };
     
             const buildAtcTree = (data) => {
